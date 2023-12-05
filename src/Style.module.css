@@ -1,0 +1,28 @@
+.table {
+  display: block;
+  border-spacing: 0;;
+}
+
+.thead_wrapper {
+  border: 1px solid #888;
+  border-bottom: none;
+  background: #efefef;
+}
+.thead {
+  overflow-x: hidden;
+}
+
+.tbody {
+  border: 1px solid #888;
+  border-top: none;
+}
+
+.th {
+  font-weight: bold;
+}
+.th, .td {
+  margin: 0;
+  padding: 0.5rem;
+  border-bottom: 1px solid #888;
+  border-right: 1px solid #888;
+}

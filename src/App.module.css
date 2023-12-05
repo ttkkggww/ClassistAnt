@@ -1,0 +1,38 @@
+
+.field {
+  display: flex;
+  align-items: center;
+ overflow-y: scroll; 
+}
+
+
+.react-tabs {
+  display: flex;
+  flex-direction: column;
+}
+
+.react-tabs__tab-list {
+  display: flex;
+  flex-direction: row;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.react-tabs__tab {
+  border: 1px solid #ccc;
+  padding: 10px;
+  margin-right: 5px;
+  cursor: pointer;
+  background-color: #f0f0f0;
+}
+
+.react-tabs__tab--selected {
+  border-bottom: 2px solid #333;
+  background-color: #fff;
+}
+
+.react-tabs__tab-panel {
+  padding: 10px;
+  border: 1px solid #ccc;
+}
