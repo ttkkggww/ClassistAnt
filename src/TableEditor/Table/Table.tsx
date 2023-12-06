@@ -40,6 +40,7 @@ const EditableCell: React.FC<EditableCellProps> = ({
 };
 
 interface TableProp {
+  tableName:string;
   columns: Column<object>[];
   data: any[];
   width: number;
@@ -50,7 +51,7 @@ interface TableProp {
  * @param TableProp 引数
  * @returns コンポーネント
  */
-function Table({ columns, data }: TableProp) {
+function Table({ columns, data ,tableName}: TableProp) {
   const defaultColumn = React.useMemo(
     () => ({
       width: 300,
@@ -71,7 +72,9 @@ function Table({ columns, data }: TableProp) {
 
   // データの更新関数
   const updateData = (rowIndex: number, columnId: string|undefined, value: any) => {
-    data[rowIndex].columnId = value;
+    if(columnId!==undefined)
+    data[rowIndex][columnId] = value;
+    sessionStorage.setItem(tableName+data,JSON.stringify(data));
     console.log(`Row ${rowIndex}, Column ${columnId} updated with value: ${value}`);
   };
 
@@ -91,7 +94,8 @@ function Table({ columns, data }: TableProp) {
           prepareRow(row);
           return (
             <tr {...row.getRowProps()}>
-              {row.cells.map((cell) => (
+              {row.cells.map((cell) => {
+                return (
                 <td {...cell.getCellProps()}>
                   {cell.column.id !== "actions" ? (
                     // ここでセルが編集可能かどうかを判定し、編集可能なら EditableCell を使用
@@ -103,7 +107,8 @@ function Table({ columns, data }: TableProp) {
                     />
                   ) : null}
                 </td>
-              ))}
+                  
+        )})}
             </tr>
           );
         })}
