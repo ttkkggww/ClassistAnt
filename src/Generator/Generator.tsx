@@ -1,4 +1,5 @@
 import Input from "./Input/Input";
+import {invoke} from "@tauri-apps/api/tauri";
 interface GeneratorProps {
   tableNames: string[];
 }
@@ -18,6 +19,8 @@ const Generator: React.FC<GeneratorProps> = ({ tableNames }) => {
 
     }
     const input = new Input(json, tableNames);
+    console.log("call handle_input");
+    invoke("handle_input", { input });
   };
   return (
     <div>

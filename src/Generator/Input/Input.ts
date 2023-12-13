@@ -69,7 +69,7 @@ export class Class {
     index:number;
     num_of_students: number;
     name: string;
-    teachers_indexes: Array<number>
+    teacher_indexes: Array<number>
     room_candidates_indexes: Array<number>
     students_group_indexes: Array<number>
     constructor(row:{[key:string]:string},columns:{[key:string]:string}[],index:number
@@ -79,9 +79,9 @@ export class Class {
         this.index = index
         this.id = Number(row[columns[0]["accessor"]])
         this.name = row[columns[1]["accessor"]]
-        this.teachers_indexes = new Array<number>
+        this.teacher_indexes = new Array<number>
         for (const teacher of (row[columns[2]["accessor"]]).split(',')) {
-            this.teachers_indexes.push(teachers.findIndex((val)=>val.name==teacher));
+            this.teacher_indexes.push(teachers.findIndex((val)=>val.name==teacher));
         }
         this.room_candidates_indexes = new Array<number>
         for (const room of (row[columns[3]["accessor"]]).split(',')) {
