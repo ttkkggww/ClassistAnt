@@ -1,0 +1,25 @@
+/* GridComponent.module.css */
+
+.grid-container {
+  display: grid;
+  grid-template-columns: 100px 100px 100px 100px 100px 100px 100px 100px 100px 100px 100px 100px 100px 100px 100px 100px 100px 100px 100px 100px 100px 100px 100px 100px ;
+  grid-template-rows: 100px 100px 100px 100px 100px 100px 100px 100px 100px 100px ;
+}
+
+.grid-row {
+    /*
+  display: grid;
+  grid-template-columns: repeat(3, 50px);
+  */
+}
+
+.grid-cell {
+  height: 10px;
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: center;
+  overflow-y: hidden; /* テキストがはみ出た場合に隠す */
+  overflow-x: hidden;
+  white-space: nowrap; /* テキストを折り返さずに1行で表示 */
+  text-overflow: ellipsis; /* テキストがはみ出た場合に省略記号で表示 */
+}

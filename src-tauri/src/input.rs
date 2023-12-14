@@ -5,7 +5,7 @@ pub mod room;
 mod student_group;
 mod teacher;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Input {
     classes: Vec<class::Class>,
     rooms: Vec<room::Room>,
@@ -14,14 +14,6 @@ pub struct Input {
 }
 
 impl Input{
-    pub fn new() -> Input{
-        Input{
-            classes: Vec::new(),
-            rooms: Vec::new(),
-            student_groups: Vec::new(),
-            teachers: Vec::new(),
-        }
-    }
     pub fn get_classes(&self) -> &Vec<class::Class>{
         &self.classes
     }

@@ -28,6 +28,10 @@ export class Input {
         return res
     }
 
+    GetClassName(idx:number):string{
+        return this.classes[idx].name
+    }
+
     GetRooms(data:{}[],columns:{}[]): Room[] {
         var res = new Array<Room>
         let idx = 0;

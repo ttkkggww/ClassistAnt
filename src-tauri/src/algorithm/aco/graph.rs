@@ -11,24 +11,20 @@ struct Edge{
     next_pheromone : f64,
 }
 
-struct RoomPeriod{
-    room : u64,
-    period : u64,
-}
 
-pub struct Graph <'a>{
+#[derive(Clone)]
+pub struct Graph {
     edges: Vec<Vec<Vec<Edge>>>,
     num_of_classes: u64,
     num_of_rooms: u64, 
     num_of_periods: u64,
-    room_periods: Vec<RoomPeriod>,
-    parameters: &'a AcoParameters,
-    classes: &'a Vec<Class>,
-    rooms: &'a Vec<Room>,
+    parameters: AcoParameters,
+    classes: Vec<Class>,
+    rooms: Vec<Room>,
 }
 
-impl<'a> Graph<'a>{
-    pub fn new(parameters: &'a AcoParameters, classes: &'a Vec<Class>, rooms: &'a Vec<Room>) -> Graph<'a>{
+impl Graph{
+    pub fn new(parameters: AcoParameters, classes: Vec<Class>, rooms: Vec<Room>) -> Graph{
         let num_of_classes = parameters.num_of_classes;
         let num_of_rooms = parameters.num_of_rooms;
         let num_of_periods = parameters.num_of_periods;
@@ -40,12 +36,11 @@ impl<'a> Graph<'a>{
                         ]; num_of_rooms as usize
                     ]; num_of_classes as usize
                 ];
-        let room_periods = Vec::new();
         let mut res =  Graph{edges:edges, 
             num_of_classes:parameters.num_of_classes, 
             num_of_rooms:parameters.num_of_rooms, 
             num_of_periods:parameters.num_of_periods, 
-            room_periods, parameters, classes, rooms};
+            parameters, classes, rooms};
         res.prepare_graph();
         return res;
     }

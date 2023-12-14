@@ -2,20 +2,23 @@ use super::ant::Ant;
 use super::aco_parameters::AcoParameters;
 use super::graph::Graph;
 
-pub struct Colony<'a>{
-    parameters: &'a AcoParameters,
-    graph: &'a mut Graph<'a>,
-    ants: Vec<Ant<'a>>,
+#[derive(Clone)]
+pub struct Colony{
+    parameters:  AcoParameters,
+    graph: Graph,
+    ants: Vec<Ant>,
 }
 
-impl <'a> Colony<'a>{
-    pub fn new(graph: &'a mut Graph<'a>,parameters:&'a AcoParameters)-> Colony<'a>{
+impl Colony{
+    pub fn new(graph: Graph,parameters:AcoParameters)-> Colony{
         let mut ants = Vec::new();
         for _ in 0..parameters.num_of_ants{
-            ants.push(Ant::new(&parameters));
+            ants.push(Ant::new(parameters.clone()));
         }
         return Colony{parameters, graph, ants}
     }
+
+    
 
     pub fn get_best_ant(&mut self)-> (f64, Vec<[usize;2]>){
         let mut best_ant = &self.ants[0];
@@ -45,7 +48,7 @@ impl <'a> Colony<'a>{
     }
     fn calc_next_pheromone(&mut self){
         for ant in self.ants.iter_mut(){
-            ant.update_next_pheromone(self.graph);
+            ant.update_next_pheromone(&mut self.graph);
         }
     }
     pub fn reset_colony(&mut self){
@@ -83,6 +86,10 @@ impl <'a> Colony<'a>{
                 }
             }
         }
+    }
+
+    pub fn get_graph(&self) -> &Graph{
+        &self.graph
     }
 
 }

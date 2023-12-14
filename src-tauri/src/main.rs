@@ -3,6 +3,7 @@
 
 use std::sync::Mutex;
 use tauri::Manager;
+use serde::{Deserialize, Serialize};
 mod input;
 mod algorithm;
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
@@ -31,47 +32,103 @@ fn handle_input(input:input::Input) -> Result<(),String> {
         ant_prob_random: 0.0,
         super_not_change: 100,
     };
-    let mut graph = algorithm::aco::graph::Graph::new(&parameters, &input.get_classes(), &input.get_rooms());
-    let mut colony = algorithm::aco::colony::Colony::new(&mut graph, &parameters);
-    let mut solver = algorithm::aco::aco_solver::ACOSolver{
-        parameters: &parameters,
-        colony: &mut colony,
-        best_ant_path: (1e9, Vec::new()),
-        super_ant_path: (1e9, Vec::new()),
-        cnt_super_not_change: 10000,
-        input: &input,
-    };
-    println!("running aco");
-    solver.run_aco();
-    println!("aco finished");
     Ok(())
 }
 
 pub struct InputManager{
-    input:Mutex<input::Input>,
+    input:Mutex<Option<input::Input>>,
+}
+
+pub struct ACOSolverManager{
+    solver:Mutex<Option<algorithm::aco::aco_solver::ACOSolver>>,
 }
 
 
 #[tauri::command]
-fn get_input(input_manager: tauri::State<'_,InputManager>) -> Result<(), String>{
+fn handle_adapt_input(input_manager: tauri::State<'_,InputManager>,solver_manager:tauri::State<'_,ACOSolverManager>) -> Result<(), String>{
     let input = input_manager.input.lock().unwrap();
-    println!("{:?}",input.get_classes());
+    if let Some(input) = input.clone(){
+        println!("adapt input to solver.");
+        let parameters = algorithm::aco::aco_parameters::AcoParameters{
+            num_of_ants: 5,
+            num_of_classes: input.get_classes().len() as u64,
+            num_of_rooms: input.get_rooms().len() as u64,
+            num_of_periods: 5*5,
+            num_of_teachers: input.get_teachers().len() as u64,
+            num_of_students: input.get_student_groups().len() as u64,
+            q: 1.0,
+            alpha: 1.0,
+            beta: 1.0,
+            rou: 0.5,
+            max_iterations: 100,
+            tau_min: 0.0,
+            tau_max: 100.0,
+            ant_prob_random: 0.0,
+            super_not_change: 100,
+        };
+        let solver = Some(algorithm::aco::aco_solver::ACOSolver{
+            parameters: parameters.clone(),
+            colony: algorithm::aco::colony::Colony::new( algorithm::aco::graph::Graph::new(parameters.clone(), input.get_classes().clone(), input.get_rooms().clone()), parameters),
+            best_ant_path: (1e9, Vec::new()),
+            super_ant_path: (1e9, Vec::new()),
+            cnt_super_not_change: 10000,
+            input: input,
+        });
+        let mut manarged_solver = solver_manager.solver.lock().unwrap();
+        manarged_solver.replace(solver.unwrap());
+    }else{
+        println!("no input!");
+    }
     Ok(())
 }
 
+#[tauri::command]
+fn handle_set_input(input_manager: tauri::State<'_,InputManager>, input:input::Input) -> Result<(), String>{
+    let mut managed_input = input_manager.input.lock().unwrap();
+    *managed_input = Some(input);
+    Ok(())
+}
+
+#[derive(Serialize, Deserialize)]
+struct TimeTable{
+    cell_name:Vec<Vec<i64>>,
+    pheromone:Vec<Vec<f64>>,
+}
+
+#[tauri::command]
+fn handle_aco_run_once(solver_manager:tauri::State<'_,ACOSolverManager>) -> Result<TimeTable, String>{
+    println!("called handle_aco_run_once");
+    let mut managed_solver = solver_manager.solver.lock().unwrap();
+    if let Some(solver) = managed_solver.as_mut(){
+        solver.run_aco_times(1);
+        println!("best path length: {}", solver.get_super_ant_score());
+        let res = TimeTable{
+            cell_name:solver.get_class_id_time_table(),
+            pheromone:solver.get_pheromone_table(),
+        };
+        return Ok(res);
+    }
+    return Err("No ACOSolver".to_string());
+}
 
 fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             greet,
-            handle_input
+            handle_input,
+            handle_adapt_input,
+            handle_set_input,
+            handle_aco_run_once,
             ])
         .setup( |app| {
-            let input = input::Input::new();
             let input_manager = InputManager{
-                input: Mutex::new(input),
+                input:Mutex::new(None),
             };
             app.manage(input_manager);
+            let solver_manager = ACOSolverManager{
+                solver:Mutex::new(None),
+            };
+            app.manage(solver_manager);
             Ok(())
         }
         )

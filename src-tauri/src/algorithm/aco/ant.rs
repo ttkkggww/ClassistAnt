@@ -9,17 +9,17 @@ static TEACHER_COEF:f64 = 5.0;
 static STUDENT_COEF:f64 = 3.0;
 
 #[derive(Clone)]
-pub struct Ant<'a>{
+pub struct Ant{
     visited_classes: Vec<bool>,
     visited_roomperiods:Vec<Vec<bool>>,
     corresponding_crp: Vec<[usize;2]>,
-    parameters: &'a AcoParameters,
+    parameters:  AcoParameters,
     teachers_times: Vec<HashMap<u64,u64>>,
     students_times: Vec<HashMap<u64,u64>>,
 }
 
-impl<'a> Ant<'a>{
-    pub fn new(parameters: &'a AcoParameters) -> Ant<'a>{
+impl Ant{
+    pub fn new(parameters: AcoParameters) -> Ant{
         let visited_classes = vec![false; parameters.num_of_classes as usize];
         let visited_roomperiods = vec![vec![false; parameters.num_of_periods as usize]; parameters.num_of_rooms as usize];
         let corresponding_crp = vec![[0,0]; parameters.num_of_classes as usize];

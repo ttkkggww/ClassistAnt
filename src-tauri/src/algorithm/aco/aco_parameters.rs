@@ -1,4 +1,5 @@
 
+#[derive(Clone, Debug)]
 pub struct AcoParameters {
     pub num_of_ants: u64,
     pub num_of_classes: u64,
