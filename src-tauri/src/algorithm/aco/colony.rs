@@ -20,14 +20,14 @@ impl Colony{
 
     
 
-    pub fn get_best_ant(&mut self)-> (f64, Vec<[usize;2]>){
+    pub fn get_best_ant(&mut self)-> Ant{
         let mut best_ant = &self.ants[0];
         for ant in self.ants.iter(){
             if ant.calc_all_path_length(&self.graph) < best_ant.calc_all_path_length(&self.graph){
                 best_ant = ant;
             }
         }
-        return (best_ant.calc_all_path_length(&self.graph), best_ant.get_corresponding_crp().clone());
+        return best_ant.clone();
 
     }
 

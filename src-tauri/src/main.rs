@@ -69,8 +69,8 @@ fn handle_adapt_input(input_manager: tauri::State<'_,InputManager>,solver_manage
         let solver = Some(algorithm::aco::aco_solver::ACOSolver{
             parameters: parameters.clone(),
             colony: algorithm::aco::colony::Colony::new( algorithm::aco::graph::Graph::new(parameters.clone(), input.get_classes().clone(), input.get_rooms().clone()), parameters),
-            best_ant_path: (1e9, Vec::new()),
-            super_ant_path: (1e9, Vec::new()),
+            best_ant: None,
+            super_ant: None,
             cnt_super_not_change: 0,
             input: input,
         });
@@ -112,9 +112,10 @@ fn handle_aco_run_once(solver_manager:tauri::State<'_,ACOSolverManager>) -> Resu
             }
         }
         let mut pheromone = vec![vec![0; parameters.num_of_periods as usize]; parameters.num_of_rooms as usize];
-        for i in 0..solver.get_best_ant_path().1.len(){
-            let l = solver.get_best_ant_path().1[i];
-            pheromone[l[0] as usize][l[1] as usize] = (solver.colony.get_graph().get_pheromone(i as usize, l[0] as usize, l[1] as usize) / max_pheromone*255.0) as i64;
+        if let Some(best_ant) = solver.get_best_ant(){
+            for (class_id,&[room_id,period_id])in best_ant.get_corresponding_crp().iter().enumerate(){
+                pheromone[room_id][period_id] = (solver.colony.get_graph().get_pheromone(class_id,room_id,period_id) / max_pheromone*255.0) as i64;
+            }
         }
         println!("best path length: {}", solver.get_best_ant_score());
         //println!("pheromone: {:?}", pheromone);
