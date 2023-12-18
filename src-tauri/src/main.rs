@@ -50,28 +50,28 @@ fn handle_adapt_input(input_manager: tauri::State<'_,InputManager>,solver_manage
     if let Some(input) = input.clone(){
         println!("adapt input to solver.");
         let parameters = algorithm::aco::aco_parameters::AcoParameters{
-            num_of_ants: 5,
+            num_of_ants: 3,
             num_of_classes: input.get_classes().len() as u64,
             num_of_rooms: input.get_rooms().len() as u64,
             num_of_periods: 5*5,
             num_of_teachers: input.get_teachers().len() as u64,
             num_of_students: input.get_student_groups().len() as u64,
-            q: 1.0,
+            q: 10.0,
             alpha: 1.0,
             beta: 1.0,
             rou: 0.5,
             max_iterations: 100,
-            tau_min: 0.0,
-            tau_max: 100.0,
+            tau_min: 0.001,
+            tau_max: 100000.0,
             ant_prob_random: 0.0,
-            super_not_change: 100,
+            super_not_change: 10000,
         };
         let solver = Some(algorithm::aco::aco_solver::ACOSolver{
             parameters: parameters.clone(),
             colony: algorithm::aco::colony::Colony::new( algorithm::aco::graph::Graph::new(parameters.clone(), input.get_classes().clone(), input.get_rooms().clone()), parameters),
             best_ant_path: (1e9, Vec::new()),
             super_ant_path: (1e9, Vec::new()),
-            cnt_super_not_change: 10000,
+            cnt_super_not_change: 0,
             input: input,
         });
         let mut manarged_solver = solver_manager.solver.lock().unwrap();
@@ -84,6 +84,7 @@ fn handle_adapt_input(input_manager: tauri::State<'_,InputManager>,solver_manage
 
 #[tauri::command]
 fn handle_set_input(input_manager: tauri::State<'_,InputManager>, input:input::Input) -> Result<(), String>{
+    println!("called handle_set_input");
     let mut managed_input = input_manager.input.lock().unwrap();
     *managed_input = Some(input);
     Ok(())
@@ -92,7 +93,7 @@ fn handle_set_input(input_manager: tauri::State<'_,InputManager>, input:input::I
 #[derive(Serialize, Deserialize)]
 struct TimeTable{
     cell_name:Vec<Vec<i64>>,
-    pheromone:Vec<Vec<f64>>,
+    pheromone_256:Vec<Vec<i64>>,
 }
 
 #[tauri::command]
@@ -100,11 +101,26 @@ fn handle_aco_run_once(solver_manager:tauri::State<'_,ACOSolverManager>) -> Resu
     println!("called handle_aco_run_once");
     let mut managed_solver = solver_manager.solver.lock().unwrap();
     if let Some(solver) = managed_solver.as_mut(){
-        solver.run_aco_times(1);
-        println!("best path length: {}", solver.get_super_ant_score());
+        solver.run_aco_times(10);
+        let parameters = solver.get_parameters();
+        let mut max_pheromone = parameters.q * parameters.num_of_ants as f64 / (1.0-parameters.rou);
+        for class_id in 0..parameters.num_of_classes as usize{
+            for room_id in 0..parameters.num_of_rooms as usize{
+                for period_id in 0..parameters.num_of_periods as usize{
+                    max_pheromone = max_pheromone.max(solver.colony.get_graph().get_pheromone(class_id, room_id, period_id));
+                }
+            }
+        }
+        let mut pheromone = vec![vec![0; parameters.num_of_periods as usize]; parameters.num_of_rooms as usize];
+        for i in 0..solver.get_best_ant_path().1.len(){
+            let l = solver.get_best_ant_path().1[i];
+            pheromone[l[0] as usize][l[1] as usize] = (solver.colony.get_graph().get_pheromone(i as usize, l[0] as usize, l[1] as usize) / max_pheromone*255.0) as i64;
+        }
+        println!("best path length: {}", solver.get_best_ant_score());
+        //println!("pheromone: {:?}", pheromone);
         let res = TimeTable{
             cell_name:solver.get_class_id_time_table(),
-            pheromone:solver.get_pheromone_table(),
+            pheromone_256:pheromone,
         };
         return Ok(res);
     }

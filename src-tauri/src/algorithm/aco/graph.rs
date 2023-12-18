@@ -74,7 +74,7 @@ impl Graph{
                 for k in 0..self.num_of_periods as usize {
                     self.edges[i][j][k].to = [j as u64,k as u64];
                     self.edges[i][j][k].length = self.calc_edge_length(i as u64,j as u64);
-                    self.edges[i][j][k].pheromone = self.parameters.q / self.edges[i][j][k].length;
+                    self.edges[i][j][k].pheromone = self.parameters.q;
                     self.edges[i][j][k].heuristic = self.parameters.q / self.edges[i][j][k].length;
                     self.edges[i][j][k].next_pheromone = 0.0;
                 }
@@ -95,7 +95,7 @@ impl Graph{
         for i in 0..self.num_of_classes as usize{
             for j in 0..self.num_of_rooms as usize{
                 for k in 0..self.num_of_periods as usize{
-                    self.edges[i][j][k].pheromone = self.parameters.q / self.edges[i][j][k].length;
+                    self.edges[i][j][k].pheromone = self.parameters.q;
                 }
             }
         }
@@ -112,7 +112,10 @@ impl Graph{
     pub fn add_pheromone(& mut self,class_index:usize,room_index:usize,period_index:usize,pheromone:f64){
         self.edges[class_index][room_index][period_index].next_pheromone += pheromone;
     }
-    pub fn set_edge_pheromone(& mut self,class_index:usize,room_index:usize,period_index:usize,pheromone:f64){
+    pub fn add_next_pheromone(& mut self,class_index:usize,room_index:usize,period_index:usize,pheromone:f64){
+        self.edges[class_index][room_index][period_index].next_pheromone += pheromone;
+    }
+    pub fn set_pheromone(& mut self,class_index:usize,room_index:usize,period_index:usize,pheromone:f64){
         self.edges[class_index][room_index][period_index].pheromone = pheromone;
     }
     pub fn get_next_pheromone(&self,class_index:usize,room_index:usize,period_index:usize) -> f64{

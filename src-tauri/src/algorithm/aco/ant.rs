@@ -4,9 +4,9 @@ use crate::input::class::Class;
 use std::collections::HashMap;
 use rand::seq::SliceRandom;
 
-static CAP_COEF:f64 = 5.0;
-static TEACHER_COEF:f64 = 5.0;
-static STUDENT_COEF:f64 = 3.0;
+static CAP_COEF:f64 = 2.0;
+static TEACHER_COEF:f64 = 1.0;
+static STUDENT_COEF:f64 = 1.0;
 
 #[derive(Clone)]
 pub struct Ant{
@@ -14,8 +14,8 @@ pub struct Ant{
     visited_roomperiods:Vec<Vec<bool>>,
     corresponding_crp: Vec<[usize;2]>,
     parameters:  AcoParameters,
-    teachers_times: Vec<HashMap<u64,u64>>,
-    students_times: Vec<HashMap<u64,u64>>,
+    teachers_times: Vec<HashMap<usize,u64>>,
+    students_times: Vec<HashMap<usize,u64>>,
 }
 
 impl Ant{
@@ -42,42 +42,100 @@ impl Ant{
             } else {
                 let random_p = rand::random::<f64>();
                 to = to_vertex[to_period.iter().position(|&x| x > random_p).unwrap()];
+                
             }
             self.corresponding_crp[*v] = to;
             self.visited_classes[*v] = true;
             self.visited_roomperiods[to[0]][to[1]] = true;
+            for i in graph.get_class_ref(*v).get_teacher_indexes().iter(){
+                if let Some(times) = self.teachers_times.get_mut(*i as usize){
+                    if let Some(time) = times.get_mut(&to[1]){
+                        *time += 1;
+                    }else{
+                        times.insert(to[1],1);
+                    }
+                }
+            }
+            for i in graph.get_class_ref(*v).get_students_group_indexes().iter(){
+                if let Some(times) = self.students_times.get_mut(*i as usize){
+                    if let Some(time) = times.get_mut(&to[1]){
+                        *time += 1;
+                    }else{
+                        times.insert(to[1],1);
+                    }
+                }
+            }
         }
     }
 
     pub fn update_next_pheromone(&mut self,graph: & mut Graph){
-        let length = self.calc_all_path_length(graph);
+        let length_v = self.calc_all_path_length_par_period(graph);
         for i in 0..self.corresponding_crp.len(){
             let [room,period] = self.corresponding_crp[i];
             let q = self.parameters.q;
-            graph.add_pheromone(i, room, period,q/length);
+            graph.add_next_pheromone(i, room, period,q/length_v[period]);
         }
+    }
+
+    fn calc_all_path_length_par_period(&self,graph: &Graph) -> Vec<f64>{
+        let mut length = vec![1.0; self.parameters.num_of_periods as usize];
+        for class_id in 0..self.corresponding_crp.len(){
+            let [room,period] = self.corresponding_crp[class_id];
+            if graph.get_room_ref(room).get_capacity() < graph.get_class_ref(class_id).get_num_of_students(){
+                length[period] += CAP_COEF;
+            }
+        }
+        let mut id = 0;
+        for mp in self.students_times.iter(){
+            for (period,v) in mp.iter(){
+                let ftime = *v as f64;
+                length[*period] += (ftime*(ftime-1.0)/2.0 as f64)*STUDENT_COEF;
+            }
+            id+=1;
+        }
+        id=0;
+        for mp in self.teachers_times.iter(){
+            for (period,v) in mp.iter(){
+                let ftime = *v as f64;
+                length[*period] += (ftime*(ftime-1.0)/2.0 as f64)*TEACHER_COEF;
+            }
+            id+=1;
+        }
+        length
     }
 
     pub fn calc_all_path_length(&self,graph: & Graph) -> f64{
         let mut length = 1.0;
-        for i in 0..self.corresponding_crp.len(){
-            let [room,_] = self.corresponding_crp[i];
-            if graph.get_room_ref(room).get_capacity() < graph.get_class_ref(i).get_num_of_students(){
+        for class_id in 0..self.corresponding_crp.len(){
+            let [room,_] = self.corresponding_crp[class_id];
+            if graph.get_room_ref(room).get_capacity() < graph.get_class_ref(class_id).get_num_of_students(){
+                println!("capacity over:{:?} > {:?}",graph.get_class_ref(class_id).get_name(),room);
                 length += CAP_COEF;
             }
         }
+        let mut id = 0;
         for mp in self.students_times.iter(){
-            for (_,v) in mp.iter(){
+            for (period,v) in mp.iter(){
                 let ftime = *v as f64;
                 length += (ftime*(ftime-1.0)/2.0 as f64)*STUDENT_COEF;
+                if *v > 1 as u64 {
+                    println!("student over id:{:?},period:{:?}",id,period);
+                }
             }
+            id+=1;
         }
+        id=0;
         for mp in self.teachers_times.iter(){
-            for (_,v) in mp.iter(){
+            for (period,v) in mp.iter(){
                 let ftime = *v as f64;
                 length += (ftime*(ftime-1.0)/2.0 as f64)*TEACHER_COEF;
+                if *v > 1 as u64 {
+                    println!("teacher over id:{:?},period:{:?}",id,period);
+                }
             }
+            id+=1;
         }
+        println!("calc_all_length:{}",length);
         length
     }
 
@@ -96,9 +154,7 @@ impl Ant{
                 }
                 let pre_pheromone = graph.get_pheromone(v,room,period);
                 let heuristics = self.parameters.q / self.calc_edge_length(
-                    graph.get_class_ref(v).get_num_of_students(),
-                    graph.get_room_ref(room).get_capacity()
-                    , graph.get_class_ref(v), period as u64);
+                    graph.get_room_ref(room).get_capacity(), graph.get_class_ref(v), period as u64);
                 let pheromone = pre_pheromone.powf(alpha) * heuristics.powf(beta);
                 sum_pheromone += pheromone;
                 to_vertexes.push([room,period]);
@@ -112,15 +168,15 @@ impl Ant{
         (to_vertexes, to_prob)
     }
 
-    fn calc_edge_length(&self,num_of_classs_students: u64, room_capacity: u64,
+    fn calc_edge_length(&self, room_capacity: u64,
         class:&Class,period:u64) -> f64{
         let mut edge_length = 1.0;
-        if num_of_classs_students > room_capacity{
+        if class.get_num_of_students() > room_capacity{
             edge_length += CAP_COEF;
         }
         for id in class.get_students_group_indexes().iter(){
             if let Some(times) = self.students_times.get(*id as usize){
-                if let Some(time) = times.get(&period){
+                if let Some(time) = times.get(&(period as usize)){
                     let ftime = *time as f64;
                     edge_length += (ftime*(ftime-1.0)/2.0 as f64)*STUDENT_COEF;
                 }
@@ -128,7 +184,7 @@ impl Ant{
         }
         for id in class.get_teacher_indexes().iter(){
             if let Some(times) = self.teachers_times.get(*id as usize){
-                if let Some(time) = times.get(&period){
+                if let Some(time) = times.get(&(period as usize)){
                     let ftime = *time as f64;
                     edge_length += (ftime*(ftime-1.0)/2.0 as f64)*TEACHER_COEF;
                 }

@@ -11,11 +11,6 @@ export class Input {
         this.rooms = this.GetRooms(input_json[table_names[2]+"data"],input_json[table_names[2]+"columns"])
         this.student_groups = this.GetStudentGroups(input_json[table_names[3]+"data"],input_json[table_names[3]+"columns"])
         this.classes = this.GetClasses(input_json[table_names[0]+"data"],input_json[table_names[0]+"columns"])
-        console.log(JSON.stringify(this.teachers))
-        console.log(JSON.stringify(this.rooms))
-        console.log(JSON.stringify(this.student_groups))
-        console.log(JSON.stringify(this.classes))
-
     }
 
 
@@ -30,6 +25,13 @@ export class Input {
 
     GetClassName(idx:number):string{
         return this.classes[idx].name
+    }
+    GetTeacherNames(idx:number):string{
+        let res = "";
+        for(const teacher_idx of this.classes[idx].teacher_indexes){
+            res += this.teachers[teacher_idx].name + ","
+        }
+        return res;
     }
 
     GetRooms(data:{}[],columns:{}[]): Room[] {

@@ -25,7 +25,7 @@ impl ACOSolver{
 
     pub fn get_class_id_time_table(&self) -> Vec<Vec<i64>>{
         let mut res = vec![vec![-1; self.parameters.num_of_periods as usize]; self.parameters.num_of_rooms as usize];
-        for(class_id, &[room_id, period_id]) in self.super_ant_path.1.iter().enumerate(){
+        for(class_id, &[room_id, period_id]) in self.best_ant_path.1.iter().enumerate(){
             res[room_id as usize][period_id as usize] = class_id as i64;
         }
         res
@@ -40,25 +40,31 @@ impl ACOSolver{
     }
 
     pub fn run_aco_times(&mut self, times: u64){
+        println!("start pheromone:{}",self.colony.get_graph().get_pheromone(0, 0, 0));
         for _ in 0..times{
             self.update_aco();
         }
+        println!("end pheromone:{}",self.colony.get_graph().get_pheromone(0, 0, 0));
     }
 
     pub fn get_super_ant_score(&self) -> f64{
         self.super_ant_path.0
     }
+    pub fn get_best_ant_score(&self) -> f64{
+        self.best_ant_path.0
+    }
 
     fn update_aco(&mut self){
         self.update_colony();
         self.reset_aco();
-        if self.super_ant_path.0 > self.best_ant_path.0{
+        if self.super_ant_path.0 >= self.best_ant_path.0{
             self.super_ant_path = self.best_ant_path.clone();
         }else{
             self.cnt_super_not_change+=1;
         }
 
         if self.cnt_super_not_change > self.parameters.super_not_change{
+            println!("reset pheromone!");
             self.colony.reset_pheromone();
             self.cnt_super_not_change = 0;
         }
@@ -76,5 +82,13 @@ impl ACOSolver{
     }
     fn update_next_pheromone(&mut self){
         self.colony.update_next_pheromone();
+    }
+
+    pub fn get_parameters(&self) -> AcoParameters{
+        self.parameters.clone()
+    }
+    
+    pub fn get_best_ant_path(&self) -> (f64, Vec<[usize;2]>){
+        self.best_ant_path.clone()
     }
 }

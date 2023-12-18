@@ -21,4 +21,7 @@ impl Class{
     pub fn get_students_group_indexes(&self) -> &Vec<u64>{
         &self.students_group_indexes
     }
+    pub fn get_name(&self) -> &String{
+        &self.name
+    }
 }

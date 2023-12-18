@@ -71,10 +71,10 @@ impl Colony{
         for i in 0..num_of_classes as usize{
             for j in 0..num_of_rooms as usize{
                 for k in 0..num_of_periods as usize{
-                    self.graph.set_edge_pheromone(i, j, k, 
+                    self.graph.set_pheromone(i, j, k, 
                         self.graph.get_pheromone(i, j, k)*rou
                         + self.graph.get_next_pheromone(i, j, k));
-                    self.graph.set_edge_pheromone(i, j, k, 
+                    self.graph.set_pheromone(i, j, k, 
                         if self.graph.get_pheromone(i, j, k) < tau_min {
                             tau_min
                         } else if self.graph.get_pheromone(i, j, k) > tau_max {
