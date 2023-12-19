@@ -2,7 +2,9 @@
 use super::colony::Colony;
 use super::aco_parameters::AcoParameters;
 use super::ant::Ant;
+use super::violations::Violations;
 use crate::input::Input;
+use super::graph::Graph;
 
 pub struct ACOSolver{
     pub parameters:  AcoParameters,
@@ -108,5 +110,22 @@ impl ACOSolver{
     pub fn get_best_ant(&self) -> Option<Ant>{
         return self.best_ant.clone();
     }
-    
+    pub fn get_best_ant_same_group_violations(&self) -> Vec<Violations>{
+        if let Some(best_ant) = &self.best_ant{
+            return best_ant.get_same_students_group_violations();
+        }
+        return Vec::new();
+    }
+    pub fn get_best_ant_same_teacher_violations(&self) -> Vec<Violations>{
+        if let Some(best_ant) = &self.best_ant{
+            return best_ant.get_same_teacher_violations();
+        }
+        return Vec::new();
+    }
+    pub fn get_best_ant_capacity_violations(&self) -> Vec<Violations>{
+        if let Some(best_ant) = &self.best_ant{
+            return best_ant.get_capacity_violations(self.colony.get_graph());
+        }
+        return Vec::new();
+    }
 }

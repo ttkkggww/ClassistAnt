@@ -3,3 +3,4 @@ mod ant;
 pub mod colony;
 pub mod graph;
 pub mod aco_solver;
+pub mod violations;

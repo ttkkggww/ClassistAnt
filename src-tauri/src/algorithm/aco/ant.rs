@@ -1,8 +1,9 @@
-use super::graph::Graph;
+use super::graph::{Graph, self};
 use super::aco_parameters::AcoParameters;
 use crate::input::class::Class;
 use std::collections::HashMap;
 use rand::seq::SliceRandom;
+use super::violations::{Violations, self};
 
 static CAP_COEF:f64 = 2.0;
 static TEACHER_COEF:f64 = 1.0;
@@ -14,8 +15,8 @@ pub struct Ant{
     visited_roomperiods:Vec<Vec<bool>>,
     corresponding_crp: Vec<[usize;2]>,
     parameters:  AcoParameters,
-    teachers_times: Vec<HashMap<usize,u64>>,
-    students_times: Vec<HashMap<usize,u64>>,
+    teachers_times: Vec<HashMap<usize,Vec<usize>>>,
+    students_times: Vec<HashMap<usize,Vec<usize>>>,
 }
 
 impl Ant{
@@ -50,18 +51,18 @@ impl Ant{
             for i in graph.get_class_ref(*v).get_teacher_indexes().iter(){
                 if let Some(times) = self.teachers_times.get_mut(*i as usize){
                     if let Some(time) = times.get_mut(&to[1]){
-                        *time += 1;
+                        time.push(to[0]);
                     }else{
-                        times.insert(to[1],1);
+                        times.insert(to[1],vec![to[0]]);
                     }
                 }
             }
             for i in graph.get_class_ref(*v).get_students_group_indexes().iter(){
                 if let Some(times) = self.students_times.get_mut(*i as usize){
                     if let Some(time) = times.get_mut(&to[1]){
-                        *time += 1;
+                        time.push(to[0]);
                     }else{
-                        times.insert(to[1],1);
+                        times.insert(to[1],vec![to[0]]);
                     }
                 }
             }
@@ -85,21 +86,17 @@ impl Ant{
                 length[period] += CAP_COEF;
             }
         }
-        let mut id = 0;
         for mp in self.students_times.iter(){
             for (period,v) in mp.iter(){
-                let ftime = *v as f64;
+                let ftime = (*v).len() as f64;
                 length[*period] += (ftime*(ftime-1.0)/2.0 as f64)*STUDENT_COEF;
             }
-            id+=1;
         }
-        id=0;
         for mp in self.teachers_times.iter(){
             for (period,v) in mp.iter(){
-                let ftime = *v as f64;
+                let ftime = (*v).len() as f64;
                 length[*period] += (ftime*(ftime-1.0)/2.0 as f64)*TEACHER_COEF;
             }
-            id+=1;
         }
         length
     }
@@ -116,9 +113,9 @@ impl Ant{
         let mut id = 0;
         for mp in self.students_times.iter(){
             for (period,v) in mp.iter(){
-                let ftime = *v as f64;
+                let ftime = (*v).len() as f64;
                 length += (ftime*(ftime-1.0)/2.0 as f64)*STUDENT_COEF;
-                if *v > 1 as u64 {
+                if (*v).len() > 1  {
                     println!("student over id:{:?},period:{:?}",id,period);
                 }
             }
@@ -127,9 +124,9 @@ impl Ant{
         id=0;
         for mp in self.teachers_times.iter(){
             for (period,v) in mp.iter(){
-                let ftime = *v as f64;
+                let ftime = (*v).len() as f64;
                 length += (ftime*(ftime-1.0)/2.0 as f64)*TEACHER_COEF;
-                if *v > 1 as u64 {
+                if (*v).len() > 1  {
                     println!("teacher over id:{:?},period:{:?}",id,period);
                 }
             }
@@ -177,7 +174,7 @@ impl Ant{
         for id in class.get_students_group_indexes().iter(){
             if let Some(times) = self.students_times.get(*id as usize){
                 if let Some(time) = times.get(&(period as usize)){
-                    let ftime = *time as f64;
+                    let ftime = (*time).len() as f64;
                     edge_length += (ftime*(ftime-1.0)/2.0 as f64)*STUDENT_COEF;
                 }
             }
@@ -185,7 +182,7 @@ impl Ant{
         for id in class.get_teacher_indexes().iter(){
             if let Some(times) = self.teachers_times.get(*id as usize){
                 if let Some(time) = times.get(&(period as usize)){
-                    let ftime = *time as f64;
+                    let ftime = (*time).len() as f64;
                     edge_length += (ftime*(ftime-1.0)/2.0 as f64)*TEACHER_COEF;
                 }
             }
@@ -213,4 +210,44 @@ impl Ant{
     pub fn get_corresponding_crp(&self) -> &Vec<[usize;2]>{
         &self.corresponding_crp
     }
+
+    pub fn get_same_teacher_violations(&self) -> Vec<Violations>{
+        let mut res = Vec::new();
+        for (_,mp) in (&self.teachers_times).iter().enumerate(){
+            for (period_id, time) in mp{
+                if time.len() > 1{
+                    let violations = Violations::new(*period_id as u64, time.clone());
+                    res.push(violations);
+                }
+            }
+        }
+        res
+    }
+    pub fn get_same_students_group_violations(&self) -> Vec<Violations>{
+        let mut res = Vec::new();
+        for (_,mp) in (&self.students_times).iter().enumerate(){
+            for (period_id, time) in mp{
+                if time.len() > 1{
+                    let violations = Violations::new(*period_id as u64, time.clone());
+                    res.push(violations);
+                }
+            }
+        }
+        res
+    }
+
+    pub fn get_capacity_violations(&self,graph : &Graph) -> Vec<Violations>{
+        let mut res = Vec::new();
+        for class_id in 0..self.corresponding_crp.len(){
+            let [room,period] = self.corresponding_crp[class_id];
+            if graph.get_room_ref(room).get_capacity() < graph.get_class_ref(class_id).get_num_of_students(){
+                let mut v = Vec::new();
+                v.push(class_id);
+                let violations = Violations::new(period as u64, v);
+                res.push(violations);
+            }
+        }
+        res
+    }
+
 }

@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::sync::Mutex;
+use algorithm::aco::violations::Violations;
 use tauri::Manager;
 use serde::{Deserialize, Serialize};
 mod input;
@@ -90,10 +91,14 @@ fn handle_set_input(input_manager: tauri::State<'_,InputManager>, input:input::I
     Ok(())
 }
 
+
 #[derive(Serialize, Deserialize)]
 struct TimeTable{
     cell_name:Vec<Vec<i64>>,
     pheromone_256:Vec<Vec<i64>>,
+    same_teachers_violations:Vec<Violations>,
+    same_group_violations:Vec<Violations>,
+    capacity_violations:Vec<Violations>
 }
 
 #[tauri::command]
@@ -122,6 +127,9 @@ fn handle_aco_run_once(solver_manager:tauri::State<'_,ACOSolverManager>) -> Resu
         let res = TimeTable{
             cell_name:solver.get_class_id_time_table(),
             pheromone_256:pheromone,
+            same_teachers_violations:solver.get_best_ant_same_teacher_violations(),
+            same_group_violations:solver.get_best_ant_same_group_violations(),
+            capacity_violations:solver.get_best_ant_capacity_violations(),
         };
         return Ok(res);
     }

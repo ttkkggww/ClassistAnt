@@ -5,10 +5,12 @@ import {rgbToHex} from '../../modules/color';
 interface GridProps {
     data: string[][];
     pheromone_256: number[][];
+    messages: string[];
 }
 
-const GridComponent: React.FC<GridProps> = ({ data ,pheromone_256}) => {
+const GridComponent: React.FC<GridProps> = ({ data ,pheromone_256,messages}) => {
   return (
+    <div>
     <div className={styles['grid-container']} style={{}}>
       {data.map((row, rowIndex) => (
           row.map((cell, columnIndex) => 
@@ -22,6 +24,16 @@ const GridComponent: React.FC<GridProps> = ({ data ,pheromone_256}) => {
           )}
           )
       ))}
+      
+    </div>
+   <div>
+      {messages.map((str, index) => (
+        <React.Fragment key={index}>
+          {str}
+          {index < messages.length - 1 && <br />} {/* 最後の要素以外に改行を挿入 */}
+        </React.Fragment>
+      ))}
+    </div>
     </div>
   );
 };

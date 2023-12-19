@@ -6,27 +6,43 @@ interface GeneratorProps {
   tableNames: string[];
 }
 
+class Violations{
+  period:number;
+  room_idxes:number[];
+  constructor(period:number,room_idxes:number[]){
+    this.period = period;
+    this.room_idxes = room_idxes;
+  }
+}
 class TimeTable {
   cell_name: number[][] = [];
   pheromone_256: number[][] = [];
-  constructor(cell_name: number[][], pheromone_256: number[][]) {
+  same_teachers_violations: Violations[];
+  same_group_violations: Violations[];
+  capacity_violations: Violations[];
+  constructor(cell_name: number[][], pheromone_256: number[][],same_teachers_violations: Violations[],same_group_violations: Violations[],capacity_violations: Violations[]) {
     this.cell_name = cell_name;
     this.pheromone_256 = pheromone_256;
-  } 
+    this.same_teachers_violations = same_teachers_violations;
+    this.same_group_violations = same_group_violations;
+    this.capacity_violations = capacity_violations;
+  }
 }
 
 class DisplayTable{
   cell_name: string[][] = [];
   pheromone_256: number[][] = [];
-  constructor(cell_name: string[][], pheromone_256: number[][]) {
+  violations_messages: string[];
+  constructor(cell_name: string[][], pheromone_256: number[][],violations_messages: string[]) {
     this.cell_name = cell_name;
     this.pheromone_256 = pheromone_256;
+    this.violations_messages = violations_messages;
   } 
 }
 
 const Generator: React.FC<GeneratorProps> = ({ tableNames }) => {
   const [input, setInput] = useState<Input | null>(null);
-  let [timeTable, setTimeTable] = useState(new DisplayTable([["NoData"]],[[255]]));
+  let [timeTable, setTimeTable] = useState(new DisplayTable([["NoData"]],[[255]],[]));
   const sendClassData = () => {
     let json: { [key: string]: any } = {};
     for (const name of tableNames) {
@@ -39,8 +55,8 @@ const Generator: React.FC<GeneratorProps> = ({ tableNames }) => {
         json[name + "columns"] = JSON.parse(columns);
       }
     }
-    setInput(new Input(json, tableNames));
-    console.log("call handle_input");
+    let input = new Input(json, tableNames);
+    setInput(input);
     invoke("handle_set_input", { input });
   };
   const generate = () => {
@@ -63,7 +79,17 @@ const Generator: React.FC<GeneratorProps> = ({ tableNames }) => {
             newTimeTalbe.push(newRow);
           }
           console.log(JSON.stringify(res))
-          setTimeTable(new DisplayTable(newTimeTalbe,res.pheromone_256));
+          let displayTable = new DisplayTable(newTimeTalbe,res.pheromone_256,[]);
+          for (const violation of res.same_teachers_violations) {
+            displayTable.violations_messages.push("Same teacher "+JSON.stringify(violation));
+          }
+          for(const violation of res.same_group_violations){
+            displayTable.violations_messages.push("Same group "+JSON.stringify(violation));
+          }
+          for(const violation of res.capacity_violations){
+            displayTable.violations_messages.push("Capacity "+JSON.stringify(violation));
+          }
+          setTimeTable(displayTable);
         }
       )
       .catch((err) => {
@@ -73,10 +99,10 @@ const Generator: React.FC<GeneratorProps> = ({ tableNames }) => {
 
   return (
     <div>
-      <button onClick={sendClassData}></button>
-      <button onClick={generate}></button>
-      <button onClick={run_once}></button>
-      <Grid data={timeTable.cell_name} pheromone_256={timeTable.pheromone_256} />
+      <button onClick={sendClassData}>convert input</button>
+      <button onClick={generate}>set input</button>
+      <button onClick={run_once}>next generation</button>
+      <Grid data={timeTable.cell_name} pheromone_256={timeTable.pheromone_256} messages={timeTable.violations_messages}/>
     </div>
   );
 };
