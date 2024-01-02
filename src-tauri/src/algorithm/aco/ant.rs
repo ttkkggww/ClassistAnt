@@ -106,7 +106,7 @@ impl Ant{
         for class_id in 0..self.corresponding_crp.len(){
             let [room,_] = self.corresponding_crp[class_id];
             if graph.get_room_ref(room).get_capacity() < graph.get_class_ref(class_id).get_num_of_students(){
-                println!("capacity over:{:?} > {:?}",graph.get_class_ref(class_id).get_name(),room);
+                //println!("capacity over:{:?} > {:?}",graph.get_class_ref(class_id).get_name(),room);
                 length += CAP_COEF;
             }
         }
@@ -116,7 +116,7 @@ impl Ant{
                 let ftime = (*v).len() as f64;
                 length += (ftime*(ftime-1.0)/2.0 as f64)*STUDENT_COEF;
                 if (*v).len() > 1  {
-                    println!("student over id:{:?},period:{:?}",id,period);
+                    //println!("student over id:{:?},period:{:?}",id,period);
                 }
             }
             id+=1;
@@ -127,12 +127,12 @@ impl Ant{
                 let ftime = (*v).len() as f64;
                 length += (ftime*(ftime-1.0)/2.0 as f64)*TEACHER_COEF;
                 if (*v).len() > 1  {
-                    println!("teacher over id:{:?},period:{:?}",id,period);
+                    //println!("teacher over id:{:?},period:{:?}",id,period);
                 }
             }
             id+=1;
         }
-        println!("calc_all_length:{}",length);
+        //println!("calc_all_length:{}",length);
         length
     }
 

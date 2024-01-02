@@ -6,6 +6,7 @@ use super::violations::Violations;
 use crate::input::Input;
 use super::graph::Graph;
 
+#[derive(Clone)]
 pub struct ACOSolver{
     pub parameters:  AcoParameters,
     pub colony:  Colony,
@@ -46,6 +47,13 @@ impl ACOSolver{
             }
         }
         res
+    }
+    pub fn run_aco_while_none_violation(&mut self){
+        self.update_aco();
+        while self.get_best_ant_total_violations().len() > 0{
+            self.update_aco();
+            self.cnt_super_not_change += 1;
+        }
     }
 
     pub fn run_aco_times(&mut self, times: u64){
@@ -128,4 +136,13 @@ impl ACOSolver{
         }
         return Vec::new();
     }
+
+    pub fn get_best_ant_total_violations(&self) -> Vec<Violations>{
+        let mut res = Vec::new();
+        res.append(&mut self.get_best_ant_same_group_violations());
+        res.append(&mut self.get_best_ant_same_teacher_violations());
+        res.append(&mut self.get_best_ant_capacity_violations());
+        return res;
+    }
+
 }
