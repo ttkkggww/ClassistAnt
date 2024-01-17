@@ -108,13 +108,7 @@ fn handle_aco_run_once(solver_manager:tauri::State<'_,ACOSolverManager>) -> Resu
     let mut managed_solver = solver_manager.solver.lock().unwrap();
     
     if let Some(solver) = managed_solver.as_mut(){
-        println!("iteration_count,ms");
-        for _ in 0..1000{
-            let now = time::Instant::now();
-            let mut solver2= solver.clone();
-            solver2.run_aco_while_none_violation();
-            println!("{},{}",solver2.cnt_super_not_change, now.elapsed().as_millis());
-        }
+        solver.run_aco_times(10);
         let parameters = solver.get_parameters();
         let mut max_pheromone = parameters.q * parameters.num_of_ants as f64 / (1.0-parameters.rou);
         for class_id in 0..parameters.num_of_classes as usize{

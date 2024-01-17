@@ -78,7 +78,6 @@ const Generator: React.FC<GeneratorProps> = ({ tableNames }) => {
             }
             newTimeTalbe.push(newRow);
           }
-          console.log(JSON.stringify(res))
           let displayTable = new DisplayTable(newTimeTalbe,res.pheromone_256,[]);
           for (const violation of res.same_teachers_violations) {
             displayTable.violations_messages.push("Same teacher "+JSON.stringify(violation));
