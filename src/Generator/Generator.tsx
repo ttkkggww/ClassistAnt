@@ -33,16 +33,18 @@ class DisplayTable{
   cell_name: string[][] = [];
   pheromone_256: number[][] = [];
   violations_messages: string[];
-  constructor(cell_name: string[][], pheromone_256: number[][],violations_messages: string[]) {
+  classIds: number[][] = [];
+  constructor(cell_name: string[][], pheromone_256: number[][],violations_messages: string[],classIds: number[][]) {
     this.cell_name = cell_name;
     this.pheromone_256 = pheromone_256;
     this.violations_messages = violations_messages;
+    this.classIds = classIds;
   } 
 }
 
 const Generator: React.FC<GeneratorProps> = ({ tableNames }) => {
   const [input, setInput] = useState<Input | null>(null);
-  let [timeTable, setTimeTable] = useState(new DisplayTable([["NoData"]],[[255]],[]));
+  let [timeTable, setTimeTable] = useState(new DisplayTable([["NoData"]],[[255]],[],[[-1]]));
   const sendClassData = () => {
     let json: { [key: string]: any } = {};
     for (const name of tableNames) {
@@ -78,8 +80,7 @@ const Generator: React.FC<GeneratorProps> = ({ tableNames }) => {
             }
             newTimeTalbe.push(newRow);
           }
-          console.log(JSON.stringify(res))
-          let displayTable = new DisplayTable(newTimeTalbe,res.pheromone_256,[]);
+          let displayTable = new DisplayTable(newTimeTalbe,res.pheromone_256,[],res.cell_name as number[][]);
           for (const violation of res.same_teachers_violations) {
             displayTable.violations_messages.push("Same teacher "+JSON.stringify(violation));
           }
@@ -102,7 +103,7 @@ const Generator: React.FC<GeneratorProps> = ({ tableNames }) => {
       <button onClick={sendClassData}>convert input</button>
       <button onClick={generate}>set input</button>
       <button onClick={run_once}>next generation</button>
-      <Grid data={timeTable.cell_name} pheromone_256={timeTable.pheromone_256} messages={timeTable.violations_messages}/>
+      <Grid data={timeTable.cell_name} pheromone_256={timeTable.pheromone_256} messages={timeTable.violations_messages} classIds={timeTable.classIds}/>
     </div>
   );
 };

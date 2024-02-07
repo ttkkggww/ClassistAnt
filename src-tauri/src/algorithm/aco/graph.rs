@@ -3,7 +3,7 @@ use crate::input::room::Room;
 use super::aco_parameters::AcoParameters;
 
 #[derive(Clone)]
-struct Edge{
+pub struct Edge{
     to : [u64; 2],
     length : f64,
     pheromone : f64,
@@ -44,6 +44,8 @@ impl Graph{
         res.prepare_graph();
         return res;
     }
+
+    #[allow(dead_code)]
     pub fn get_max_pheromone(&self) -> f64{
         let mut max_pheromone = 0.0;
         for i in self.edges.iter(){
@@ -109,6 +111,8 @@ impl Graph{
     pub fn get_room_ref(&self,room_index:usize) -> &Room{
         return &self.rooms[room_index];
     }
+
+    #[allow(dead_code)]
     pub fn add_pheromone(& mut self,class_index:usize,room_index:usize,period_index:usize,pheromone:f64){
         self.edges[class_index][room_index][period_index].next_pheromone += pheromone;
     }
@@ -121,7 +125,21 @@ impl Graph{
     pub fn get_next_pheromone(&self,class_index:usize,room_index:usize,period_index:usize) -> f64{
         return self.edges[class_index][room_index][period_index].next_pheromone;
     }
+
+    #[allow(dead_code)]
     pub fn get_edge(&self,class_index:usize,room_index:usize,period_index:usize) -> &Edge{
         return &self.edges[class_index][room_index][period_index];
+    }
+
+    
+
+    #[allow(dead_code)]
+    pub fn set_one_hot_pheromone(& mut self,class_index:usize,room_index:usize,period_index:usize,min_pheromone:f64,max_pheromone:f64){
+        for j in 0..self.num_of_rooms as usize{
+            for k in 0..self.num_of_periods as usize{
+                self.edges[class_index][j][k].pheromone = min_pheromone;
+            }
+        }
+        self.edges[class_index][room_index][period_index].pheromone = self.parameters.q*max_pheromone;
     }
 }

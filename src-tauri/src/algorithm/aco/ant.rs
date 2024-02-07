@@ -37,6 +37,17 @@ impl Ant{
         self.students_times = vec![HashMap::new(); self.parameters.num_of_students as usize];
         for v in shuffled_array.iter(){
             let (to_vertex, to_period) = self.calc_prob_from_v(*v,graph);
+            if *v == 0 {
+                print!("pheromone: ");
+                for i in 0..self.parameters.num_of_rooms as usize{
+                    for j in 0..self.parameters.num_of_periods as usize{
+                        print!("{},", graph.get_pheromone(*v,i,j));
+                    }
+
+                }
+                println!("");
+                println!("to_period: {:?}", to_period);
+            }
             let to:[usize;2];
             if rand::random::<f64>() < self.parameters.ant_prob_random {
                 to = to_vertex[rand::random::<usize>() % to_vertex.len()];
@@ -106,33 +117,21 @@ impl Ant{
         for class_id in 0..self.corresponding_crp.len(){
             let [room,_] = self.corresponding_crp[class_id];
             if graph.get_room_ref(room).get_capacity() < graph.get_class_ref(class_id).get_num_of_students(){
-                //println!("capacity over:{:?} > {:?}",graph.get_class_ref(class_id).get_name(),room);
                 length += CAP_COEF;
             }
         }
-        let mut id = 0;
         for mp in self.students_times.iter(){
-            for (period,v) in mp.iter(){
+            for (_,v) in mp.iter(){
                 let ftime = (*v).len() as f64;
                 length += (ftime*(ftime-1.0)/2.0 as f64)*STUDENT_COEF;
-                if (*v).len() > 1  {
-                    //println!("student over id:{:?},period:{:?}",id,period);
-                }
             }
-            id+=1;
         }
-        id=0;
         for mp in self.teachers_times.iter(){
-            for (period,v) in mp.iter(){
+            for (_,v) in mp.iter(){
                 let ftime = (*v).len() as f64;
                 length += (ftime*(ftime-1.0)/2.0 as f64)*TEACHER_COEF;
-                if (*v).len() > 1  {
-                    //println!("teacher over id:{:?},period:{:?}",id,period);
-                }
             }
-            id+=1;
         }
-        //println!("calc_all_length:{}",length);
         length
     }
 
@@ -153,6 +152,9 @@ impl Ant{
                 let heuristics = self.parameters.q / self.calc_edge_length(
                     graph.get_room_ref(room).get_capacity(), graph.get_class_ref(v), period as u64);
                 let pheromone = pre_pheromone.powf(alpha) * heuristics.powf(beta);
+                if v==0 {
+                    println!("v:{} r{} p{} ,pre_pheromone: {}, heuristics: {}, pheromone: {},",v,room,period ,pre_pheromone, heuristics, pheromone);
+                }
                 sum_pheromone += pheromone;
                 to_vertexes.push([room,period]);
                 to_pheromones.push(pheromone);

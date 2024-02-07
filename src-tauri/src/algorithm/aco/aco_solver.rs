@@ -3,8 +3,10 @@ use super::colony::Colony;
 use super::aco_parameters::AcoParameters;
 use super::ant::Ant;
 use super::violations::Violations;
-use crate::input::Input;
+use crate::input::{class, Input};
 use super::graph::Graph;
+use tauri::Manager;
+use std::sync::Mutex;
 
 #[derive(Clone)]
 pub struct ACOSolver{
@@ -145,4 +147,27 @@ impl ACOSolver{
         return res;
     }
 
+    fn ceiling_max_pheromone(&self) -> f64{
+        return (self.parameters.num_of_ants as f64)*(self.parameters.q/self.parameters.rou);
+    }
+
+    pub fn set_one_hot_pheromone(&mut self, class_id: usize, room_id: usize, period_id: usize){
+        let max_pheromone = self.ceiling_max_pheromone();
+        self.colony.set_one_hot_pheromone(class_id, room_id, period_id, self.parameters.tau_min,max_pheromone);
+    }
+}
+
+
+pub struct ACOSolverManager{
+    pub solver:Mutex<Option<ACOSolver>>,
+}
+
+#[tauri::command]
+pub fn handle_one_hot_pheromone(solver_manager:tauri::State<'_,ACOSolverManager>, class_id: usize, room_id: usize, period_id: usize) -> Result<(), String>{
+    println!("called handle_one_hot_pheromone {} {} {}", class_id, room_id, period_id);
+    let mut managed_solver = solver_manager.solver.lock().unwrap();
+    if let Some(solver) = managed_solver.as_mut(){
+        solver.set_one_hot_pheromone(class_id, room_id, period_id);
+    }
+    Ok(())
 }
