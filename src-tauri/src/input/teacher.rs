@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Teacher {
-    id: u64,
-    index: u64,
-    name: String,
+    pub id: u64,
+    pub index: u64,
+    pub name: String,
 }

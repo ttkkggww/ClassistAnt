@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct StudentGroup {
-    id: u64,
-    name: String,
-    index: u64,
+    pub id: u64,
+    pub name: String,
+    pub index: u64,
 }

@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::{time};
 mod input;
 mod algorithm;
+use std::error::Error;
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -138,7 +139,7 @@ fn handle_aco_run_once(solver_manager:tauri::State<'_,ACOSolverManager>) -> Resu
 
 use algorithm::aco::aco_solver::handle_one_hot_pheromone;
 
-fn main() {
+fn main() -> Result<(), Box<dyn Error>>{
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             greet,
@@ -162,4 +163,5 @@ fn main() {
         )
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+    Ok(())
 }
