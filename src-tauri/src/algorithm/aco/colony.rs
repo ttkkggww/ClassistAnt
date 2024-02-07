@@ -92,4 +92,8 @@ impl Colony{
         &self.graph
     }
 
+    pub fn set_one_hot_pheromone(&mut self, class_id: usize, room_id: usize, period_id: usize, min_pheromone:f64,max_pheromone:f64){
+        self.graph.set_one_hot_pheromone(class_id, room_id, period_id, min_pheromone,max_pheromone);
+    }
+
 }

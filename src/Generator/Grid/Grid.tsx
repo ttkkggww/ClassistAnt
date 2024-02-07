@@ -4,17 +4,20 @@ import { rgbToHex } from "../../modules/color";
 import { Droppable } from "./Droppable/Droppable";
 import { Draggable } from "./Draggable/Draggable";
 import { DndContext } from "@dnd-kit/core";
+import { invoke } from '@tauri-apps/api/tauri'
 
 interface GridProps {
   data: string[][];
   pheromone_256: number[][];
   messages: string[];
+  classIds: number[][];
 }
 
 const GridComponent: React.FC<GridProps> = ({
   data,
   pheromone_256,
   messages,
+  classIds
 }) => {
   const generateGridArray = () => {
     let result = [];
@@ -29,6 +32,9 @@ const GridComponent: React.FC<GridProps> = ({
           ),
           text: cell,
           id: rowIndex * row.length + columnIndex,
+          rowIndex: rowIndex,
+          columnIndex: columnIndex,
+          classId: classIds[rowIndex][columnIndex]
         });
       }
     }
@@ -40,6 +46,11 @@ const GridComponent: React.FC<GridProps> = ({
   const handleDragEnd = (event: any) => {
     const { over, active } = event;
     console.log(over, active);
+    invoke("handle_one_hot_pheromone",{
+      classId:gridArray[active.id].classId,
+      roomId:gridArray[over.id].rowIndex,
+      periodId:gridArray[over.id].columnIndex
+    });
 
     const swapGridArray = (index1: number, index2: number) => {
       setGridArray((prevGridArray) => {
@@ -78,6 +89,7 @@ const GridComponent: React.FC<GridProps> = ({
                 hex_color={cell.color_hex}
                 text={cell.text}
                 id={cell.id}
+                classId={classIds[cell.rowIndex][cell.columnIndex]}
                 styles={styles["grid-cell"]}
               />
             );

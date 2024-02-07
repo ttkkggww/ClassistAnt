@@ -41,9 +41,7 @@ pub struct InputManager{
     input:Mutex<Option<input::Input>>,
 }
 
-pub struct ACOSolverManager{
-    solver:Mutex<Option<algorithm::aco::aco_solver::ACOSolver>>,
-}
+use algorithm::aco::aco_solver::ACOSolverManager;
 
 
 #[tauri::command]
@@ -108,7 +106,7 @@ fn handle_aco_run_once(solver_manager:tauri::State<'_,ACOSolverManager>) -> Resu
     let mut managed_solver = solver_manager.solver.lock().unwrap();
     
     if let Some(solver) = managed_solver.as_mut(){
-        solver.run_aco_times(10);
+        solver.run_aco_times(1);
         let parameters = solver.get_parameters();
         let mut max_pheromone = parameters.q * parameters.num_of_ants as f64 / (1.0-parameters.rou);
         for class_id in 0..parameters.num_of_classes as usize{
@@ -138,6 +136,8 @@ fn handle_aco_run_once(solver_manager:tauri::State<'_,ACOSolverManager>) -> Resu
     return Err("No ACOSolver".to_string());
 }
 
+use algorithm::aco::aco_solver::handle_one_hot_pheromone;
+
 fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
@@ -146,6 +146,7 @@ fn main() {
             handle_adapt_input,
             handle_set_input,
             handle_aco_run_once,
+            handle_one_hot_pheromone
             ])
         .setup( |app| {
             let input_manager = InputManager{

@@ -28,4 +28,4 @@ git = "https://github.com/tauri-apps/fix-path-env-rs"
 custom-protocol = ["tauri/custom-protocol"]
 
 [profile.dev]
-opt-level = 3
+opt-level = 0

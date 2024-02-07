@@ -6,6 +6,7 @@ interface DraggableProps {
     text: string;
     id: number;
     styles: string;
+    classId : number;
 }
 
 export function Draggable({hex_color, text,id,styles}: DraggableProps)  {
