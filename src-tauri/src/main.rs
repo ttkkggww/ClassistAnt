@@ -140,6 +140,7 @@ fn handle_aco_run_once(solver_manager:tauri::State<'_,ACOSolverManager>) -> Resu
 use algorithm::aco::aco_solver::handle_one_hot_pheromone;
 
 fn main() -> Result<(), Box<dyn Error>>{
+    let input = input::Input::new();
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             greet,

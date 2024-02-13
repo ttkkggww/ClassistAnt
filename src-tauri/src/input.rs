@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use std::{error::Error, io , process};
+use std::{error::Error};
 
 use self::{student_group::StudentGroup, teacher::Teacher};
 
@@ -18,16 +18,19 @@ pub struct Input {
 }
 
 const TEACHERS_CSV_PATH : &str = "./csvdata/teachers.csv";
-const STUDENT_GROUPS_CSV_PATH : &str = "./csvdata/teachers.csv";
+const STUDENT_GROUPS_CSV_PATH : &str = "./csvdata/student_groups.csv";
 const CLASSES_CSV_PATH : &str = "./csvdata/classes.csv";
 const ROOMS_CSV_PATH : &str = "./csvdata/rooms.csv";
 
 impl Input{
-    fn new () -> Input{
+    pub fn new () -> Input{
         let teachers = Input::read_teachers_from_csv(&TEACHERS_CSV_PATH.to_string()).unwrap();
         let rooms = Input::read_rooms_from_csv(&ROOMS_CSV_PATH.to_string()).unwrap();
         let student_groups = Input::read_student_groups_from_csv(&STUDENT_GROUPS_CSV_PATH.to_string()).unwrap();
         let classes = Input::read_classes_from_csv(&CLASSES_CSV_PATH.to_string(),&teachers,&rooms,&student_groups).unwrap();
+        println!("{:?}",student_groups);
+        println!("{:?}",rooms);
+        println!("{:?}",teachers);
         Input{classes,rooms,student_groups,teachers}
 
     }
@@ -62,11 +65,11 @@ impl Input{
     fn read_student_groups_from_csv(file_path:&String) -> Result<Vec<student_group::StudentGroup>,Box<dyn Error>> {
         let mut rdr = csv::Reader::from_path(file_path)?;
         let mut student_groups = Vec::new();
-        for result in rdr.records() {
+        for (index,result) in rdr.records().enumerate() {
             let record = result?;
             let id = record[0].parse::<u64>().unwrap();
-            let index = record[1].parse::<u64>().unwrap();
-            let name = record[2].to_string();
+            let name = record[1].to_string();
+            let index = index as u64;
             student_groups.push(student_group::StudentGroup{id,index,name});
         }
         Ok(student_groups)
@@ -84,7 +87,7 @@ impl Input{
             for i in record[2].split(","){
                 if let Some(add) = teachers.iter().position(|x| x.name== i){
                     teacher_indexes.push(add as u64);
-                }else {
+                } else {
                     panic!("teacher not found");
                 }
             }
@@ -124,6 +127,7 @@ impl Input{
         &self.teachers
     }
 
+    #[allow(dead_code)]
     fn read_csv(file_path:&String) -> Result<(),Box<dyn Error>> {
         let mut rdr = csv::Reader::from_path(file_path)?;
         for result in rdr.records() {
