@@ -34,7 +34,6 @@ impl Input{
         let (student_groups,student_group_columns ) = Input::read_student_groups_from_csv(&STUDENT_GROUPS_CSV_PATH.to_string()).unwrap();
         let (classes ,class_columns) = Input::read_classes_from_csv(&CLASSES_CSV_PATH.to_string(),&teachers,&rooms,&student_groups).unwrap();
         Input{classes,class_columns,rooms,room_columns,student_groups,student_group_columns,teachers,teacher_columns}
-
     }
 
     fn read_teachers_from_csv(file_path:&String) -> Result<(Vec<teacher::Teacher>,Vec<column::Column>),Box<dyn Error>> {
@@ -152,14 +151,4 @@ impl Input{
         &self.teachers
     }
 
-    #[allow(dead_code)]
-    fn read_csv(file_path:&String) -> Result<(),Box<dyn Error>> {
-        let mut rdr = csv::Reader::from_path(file_path)?;
-        for result in rdr.records() {
-            let record = result?;
-            println!("{:?}", record);
-        }
-        Ok(())
-    }
-    
 }

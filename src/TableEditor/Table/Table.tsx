@@ -5,7 +5,7 @@ import table_style from "./Table.module.css";
 interface EditableCellProps {
   value: any;
   row: any;
-  column: Column<object>;
+  column: Column<any>;
   updateData: (rowIndex: number, columnId: string|undefined, value: any) => void;
 }
 
@@ -41,7 +41,7 @@ const EditableCell: React.FC<EditableCellProps> = ({
 
 interface TableProp {
   tableName:string;
-  columns: Column<object>[];
+  columns: readonly Column<any>[];
   data: any[];
   width: number;
 }
@@ -63,7 +63,7 @@ function Table({ columns, data ,tableName}: TableProp) {
   const { getTableProps, getTableBodyProps, headerGroups, rows, prepareRow } =
     useTable(
       {
-        columns,
+        columns ,
         data,
         defaultColumn,
       },

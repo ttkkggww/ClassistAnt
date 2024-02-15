@@ -6,6 +6,8 @@ import Table from "./Table/Table";
 import styles from "../App.module.css";
 import {Column} from "react-table";
 import { readTextFile } from "@tauri-apps/api/fs";
+import {invoke} from "@tauri-apps/api/tauri";
+
 interface TableEditorProps{
   tableName:string
   defaultPath:string
@@ -13,7 +15,7 @@ interface TableEditorProps{
 
 const TableEditor :React.FC<TableEditorProps> = (props:TableEditorProps) => {
   // CSVから読み込んだデータ
-  const [columns, setColumns] = useState<Column<object>[]>(() => {
+  const [columns, setColumns] = useState<Column<any>[]>(() => {
     // ページを開いたときに sessionStorage から columns 情報を読み込む
     const storedColumns = sessionStorage.getItem(props.tableName + "columns");
     return storedColumns ? JSON.parse(storedColumns) : [{ Header: "No Data" }];
@@ -144,10 +146,17 @@ useEffect(() => {
       skipEmptyLines: true,
     });
   };
+  
+  const handle_test = () => {
+    invoke("handle_get_table",{tableType: "Teachers"}).then((res)=>{
+    }).catch((err)=>{
+    });
+  }
 
   // テーブルに表示する列の定義（CSVの１行目から作成）
   return (
     <div className={styles.field}>
+      <button onClick={handle_test}>test</button>
       <div style={{ height: "100vh", overflow: "scroll" }}>
         <div style={{ height: "100%" }}>
             <Table columns={columns} data={data} width={660} tableName={props.tableName} />
