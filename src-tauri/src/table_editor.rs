@@ -15,36 +15,35 @@ use serde::{Serialize, Deserialize};
 use student_group::StudentGroup;
 use teacher::Teacher;
 use column::Column;
-use tauri::command;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum TableType {
-    teachers(Teachers),
-    student_groups(StudentGroups),
-    classes(Classes),
-    rooms(Rooms),
+    Teachers(Teachers),
+    StudentGroups(StudentGroups),
+    Classes(Classes),
+    Rooms(Rooms),
 }
 
 #[tauri::command]
 pub fn handle_get_table(table_type:String) -> Result<TableType, String> {
-    if table_type == "Teachers" {
+    if table_type == "teachers" {
         let res = Teachers::new().map_err(|e| e.to_string())?;
-        return Ok(TableType::teachers(res));
-    }else if table_type == "StudentGroups" {
+        return Ok(TableType::Teachers(res));
+    }else if table_type == "studentGroups" {
         let res = StudentGroups::new().map_err(|e| e.to_string())?;
-        return Ok(TableType::student_groups(res));
-    }else if table_type == "Classes" {
+        return Ok(TableType::StudentGroups(res));
+    }else if table_type == "classes" {
         let res = Classes::new().map_err(|e| e.to_string())?;
-        return Ok(TableType::classes(res));
-    }else if table_type == "Rooms" {
+        return Ok(TableType::Classes(res));
+    }else if table_type == "rooms" {
         let res = Rooms::new().map_err(|e| e.to_string())?;
-        return Ok(TableType::rooms(res));
+        return Ok(TableType::Rooms(res));
     }
     return Err("Table type not found".to_string());
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-struct Classes {
+pub struct Classes {
     pub columns: Vec<Column>,
     pub data: Vec<Class>,
 }
@@ -110,13 +109,8 @@ impl Rooms {
     }
 }
 
-#[tauri::command]
-pub fn handle_get_rooms() -> Result<Rooms, String> {
-    return Rooms::new().map_err(|e| e.to_string());
-}
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
-struct StudentGroups {
+pub struct StudentGroups {
     pub columns: Vec<Column>,
     pub data: Vec<StudentGroup>,
 }
@@ -144,7 +138,7 @@ impl StudentGroups {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-struct Teachers {
+pub struct Teachers {
     pub columns: Vec<Column>,
     pub data: Vec<Teacher>,
 }

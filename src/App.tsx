@@ -14,16 +14,7 @@ type TableData = {
 }
 
 function App() {
-  const tableNames = ["講義一覧","教員一覧","教室一覧","学生グループ一覧"];
-  const defaultPathes = ["./csvdata/講義一覧.csv","./csvdata/教員一覧.csv","./csvdata/教室一覧.csv","./csvdata/学生グループ一覧.csv"];
-  readDir("./csvdata").then((result)=>{
-    console.log("csvdataの中身")
-    result.forEach((file)=>{
-      console.log(file);
-    })
-  }).catch((err)=>{
-    console.log(err);
-  })
+  const tableNames = ["classes","teachers","rooms","studentGroups"];
   return (
     <div className={styles.app}>
       <Tabs >
@@ -40,7 +31,7 @@ function App() {
           {tableNames.map((name,i) => (
           <TabPanel key={name}>
             {/* 各タブに CsvTable コンポーネントを配置 */}
-            <TableEditor tableName={name} defaultPath={defaultPathes[i]}/>
+            <TableEditor tableName={name}/>
           </TabPanel>
         ))}
         <TabPanel>
