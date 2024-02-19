@@ -86,8 +86,9 @@ fn handle_adapt_input(input_manager: tauri::State<'_,InputManager>,solver_manage
 }
 
 #[tauri::command]
-fn handle_set_input(input_manager: tauri::State<'_,InputManager>, input:input::Input) -> Result<(), String>{
+fn handle_set_input(input_manager: tauri::State<'_,InputManager>) -> Result<(), String>{
     println!("called handle_set_input");
+    let input = input::Input::new();
     let mut managed_input = input_manager.input.lock().unwrap();
     *managed_input = Some(input);
     Ok(())

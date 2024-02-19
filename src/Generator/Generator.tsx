@@ -46,20 +46,7 @@ const Generator: React.FC<GeneratorProps> = ({ tableNames }) => {
   const [input, setInput] = useState<Input | null>(null);
   let [timeTable, setTimeTable] = useState(new DisplayTable([["NoData"]],[[255]],[],[[-1]]));
   const sendClassData = () => {
-    let json: { [key: string]: any } = {};
-    for (const name of tableNames) {
-      const data = sessionStorage.getItem(name + "data");
-      if (data) {
-        json[name + "data"] = JSON.parse(data);
-      }
-      const columns = sessionStorage.getItem(name + "columns");
-      if (columns) {
-        json[name + "columns"] = JSON.parse(columns);
-      }
-    }
-    let input = new Input(json, tableNames);
-    setInput(input);
-    invoke("handle_set_input", { input });
+    invoke("handle_set_input");
   };
   const generate = () => {
     invoke("handle_adapt_input");
