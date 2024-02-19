@@ -45,6 +45,9 @@ const GridComponent: React.FC<GridProps> = ({
 
   const handleDragEnd = (event: any) => {
     const { over, active } = event;
+    if(over==null){
+      return;
+    }
     console.log(over, active);
     invoke("handle_one_hot_pheromone",{
       classId:gridArray[active.id].classId,
