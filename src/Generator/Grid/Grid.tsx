@@ -6,6 +6,20 @@ import { Draggable } from "./Draggable/Draggable";
 import { DndContext } from "@dnd-kit/core";
 import { invoke } from '@tauri-apps/api/tauri'
 
+interface Cell {
+    className: string;
+    teachers?: string[];
+    students?: string[];
+    color?: string;
+    isLocked?: boolean;
+    size?: number;
+}
+
+export interface TimeTable {
+    cells: Array<Cell | undefined>;
+}
+
+
 interface GridProps {
   data: string[][];
   pheromone_256: number[][];
