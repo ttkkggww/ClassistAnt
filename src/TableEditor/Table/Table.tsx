@@ -2,9 +2,8 @@ import React, { useState } from "react";
 import { Column, useTable } from "react-table";
 import table_style from "./Table.module.css";
 
-
 interface TableProp {
-  tableName:string;
+  tableName: string;
   columns: Column<any>[];
   data: any[];
   width: number;
@@ -16,17 +15,16 @@ interface TableProp {
  * @returns コンポーネント
  */
 function Table({ columns, data }: TableProp) {
-  console.log(columns,data);
+  console.log(columns, data);
   // react-tableの定義
   const { getTableProps, getTableBodyProps, headerGroups, rows, prepareRow } =
     useTable(
       {
-        columns ,
+        columns,
         data,
       },
       // 任意のフックやオプションを追加できます
     );
-
 
   return (
     <table {...getTableProps()} className={table_style.table}>
@@ -45,12 +43,8 @@ function Table({ columns, data }: TableProp) {
           return (
             <tr {...row.getRowProps()}>
               {row.cells.map((cell) => {
-                return (
-                <td {...cell.getCellProps()}>
-                  {cell.value}
-                </td>
-                  
-        )})}
+                return <td {...cell.getCellProps()}>{cell.value}</td>;
+              })}
             </tr>
           );
         })}

@@ -7,8 +7,8 @@ pub struct Room {
     pub capacity: u64,
 }
 
-impl Room{
-    pub fn get_capacity(&self) -> u64{
+impl Room {
+    pub fn get_capacity(&self) -> u64 {
         self.capacity
     }
 }
