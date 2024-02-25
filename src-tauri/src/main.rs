@@ -1,13 +1,13 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::sync::Mutex;
 use algorithm::aco::violations::Violations;
-use tauri::Manager;
 use serde::{Deserialize, Serialize};
-use std::{time};
-mod input;
+use std::sync::Mutex;
+use std::time;
+use tauri::Manager;
 mod algorithm;
+mod input;
 use std::error::Error;
 mod table_editor;
 use algorithm::time_table;
@@ -19,13 +19,13 @@ fn greet(name: &str) -> String {
 }
 
 #[tauri::command]
-fn handle_input(input:input::Input) -> Result<(),String> {
+fn handle_input(input: input::Input) -> Result<(), String> {
     println!("called handle_input");
-    let parameters = algorithm::aco::aco_parameters::AcoParameters{
+    let parameters = algorithm::aco::aco_parameters::AcoParameters {
         num_of_ants: 5,
         num_of_classes: input.get_classes().len() as u64,
         num_of_rooms: input.get_rooms().len() as u64,
-        num_of_periods: 5*5,
+        num_of_periods: 5 * 5,
         num_of_teachers: input.get_teachers().len() as u64,
         num_of_students: input.get_student_groups().len() as u64,
         q: 1.0,
@@ -41,23 +41,25 @@ fn handle_input(input:input::Input) -> Result<(),String> {
     Ok(())
 }
 
-pub struct InputManager{
-    input:Mutex<Option<input::Input>>,
+pub struct InputManager {
+    input: Mutex<Option<input::Input>>,
 }
 
 use algorithm::aco::aco_solver::ACOSolverManager;
 
-
 #[tauri::command]
-fn handle_adapt_input(input_manager: tauri::State<'_,InputManager>,solver_manager:tauri::State<'_,ACOSolverManager>) -> Result<(), String>{
+fn handle_adapt_input(
+    input_manager: tauri::State<'_, InputManager>,
+    solver_manager: tauri::State<'_, ACOSolverManager>,
+) -> Result<(), String> {
     let input = input_manager.input.lock().unwrap();
-    if let Some(input) = input.clone(){
+    if let Some(input) = input.clone() {
         println!("adapt input to solver.");
-        let parameters = algorithm::aco::aco_parameters::AcoParameters{
+        let parameters = algorithm::aco::aco_parameters::AcoParameters {
             num_of_ants: 3,
             num_of_classes: input.get_classes().len() as u64,
             num_of_rooms: input.get_rooms().len() as u64,
-            num_of_periods: 5*5,
+            num_of_periods: 5 * 5,
             num_of_teachers: input.get_teachers().len() as u64,
             num_of_students: input.get_student_groups().len() as u64,
             q: 10.0,
@@ -70,9 +72,16 @@ fn handle_adapt_input(input_manager: tauri::State<'_,InputManager>,solver_manage
             ant_prob_random: 0.0,
             super_not_change: 10000,
         };
-        let solver = Some(algorithm::aco::aco_solver::ACOSolver{
+        let solver = Some(algorithm::aco::aco_solver::ACOSolver {
             parameters: parameters.clone(),
-            colony: algorithm::aco::colony::Colony::new( algorithm::aco::graph::Graph::new(parameters.clone(), input.get_classes().clone(), input.get_rooms().clone()), parameters),
+            colony: algorithm::aco::colony::Colony::new(
+                algorithm::aco::graph::Graph::new(
+                    parameters.clone(),
+                    input.get_classes().clone(),
+                    input.get_rooms().clone(),
+                ),
+                parameters,
+            ),
             best_ant: None,
             super_ant: None,
             cnt_super_not_change: 0,
@@ -80,14 +89,14 @@ fn handle_adapt_input(input_manager: tauri::State<'_,InputManager>,solver_manage
         });
         let mut manarged_solver = solver_manager.solver.lock().unwrap();
         manarged_solver.replace(solver.unwrap());
-    }else{
+    } else {
         println!("no input!");
     }
     Ok(())
 }
 
 #[tauri::command]
-fn handle_set_input(input_manager: tauri::State<'_,InputManager>) -> Result<(), String>{
+fn handle_set_input(input_manager: tauri::State<'_, InputManager>) -> Result<(), String> {
     println!("called handle_set_input");
     let input = input::Input::new();
     let mut managed_input = input_manager.input.lock().unwrap();
@@ -95,16 +104,16 @@ fn handle_set_input(input_manager: tauri::State<'_,InputManager>) -> Result<(), 
     Ok(())
 }
 
-
-
 #[tauri::command]
-fn handle_aco_run_once(solver_manager:tauri::State<'_,ACOSolverManager>) -> Result<time_table::TimeTable, String>{
+fn handle_aco_run_once(
+    solver_manager: tauri::State<'_, ACOSolverManager>,
+) -> Result<time_table::TimeTable, String> {
     println!("called handle_aco_run_once");
     let mut managed_solver = solver_manager.solver.lock().unwrap();
-    
-    if let Some(solver) = managed_solver.as_mut(){
+
+    if let Some(solver) = managed_solver.as_mut() {
         solver.run_aco_times(1);
-        let res = time_table::convert_solver_to_timetable(solver).map_err(|e|e.to_string())?;
+        let res = time_table::convert_solver_to_timetable(solver).map_err(|e| e.to_string())?;
         return Ok(res);
     }
     return Err("No ACOSolver".to_string());
@@ -113,7 +122,7 @@ fn handle_aco_run_once(solver_manager:tauri::State<'_,ACOSolverManager>) -> Resu
 use algorithm::aco::aco_solver::handle_one_hot_pheromone;
 use table_editor::handle_get_table;
 
-fn main() -> Result<(), Box<dyn Error>>{
+fn main() -> Result<(), Box<dyn Error>> {
     let input = input::Input::new();
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
@@ -124,19 +133,18 @@ fn main() -> Result<(), Box<dyn Error>>{
             handle_aco_run_once,
             handle_one_hot_pheromone,
             handle_get_table
-            ])
-        .setup( |app| {
-            let input_manager = InputManager{
-                input:Mutex::new(None),
+        ])
+        .setup(|app| {
+            let input_manager = InputManager {
+                input: Mutex::new(None),
             };
             app.manage(input_manager);
-            let solver_manager = ACOSolverManager{
-                solver:Mutex::new(None),
+            let solver_manager = ACOSolverManager {
+                solver: Mutex::new(None),
             };
             app.manage(solver_manager);
             Ok(())
-        }
-        )
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
     Ok(())

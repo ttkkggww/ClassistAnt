@@ -1,18 +1,15 @@
-
-use serde::{Serialize, Deserialize};
-
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-pub enum Cell{
+pub enum Cell {
     ActiveCell(ActiveCell),
-    BlankCell(BlankCell)
+    BlankCell(BlankCell),
 }
 
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct ActiveCell{
+pub struct ActiveCell {
     pub id: usize,
     pub class_name: String,
     pub teachers: Option<Vec<String>>,
@@ -23,7 +20,7 @@ pub struct ActiveCell{
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct BlankCell{
+pub struct BlankCell {
     pub id: usize,
     pub size: Option<u64>,
 }

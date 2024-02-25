@@ -1,20 +1,19 @@
-
-const TEACHERS_CSV_PATH : &str = "./csvdata/teachers.csv";
-const STUDENT_GROUPS_CSV_PATH : &str = "./csvdata/student_groups.csv";
-const CLASSES_CSV_PATH : &str = "./csvdata/classes.csv";
-const ROOMS_CSV_PATH : &str = "./csvdata/rooms.csv";
+const TEACHERS_CSV_PATH: &str = "./csvdata/teachers.csv";
+const STUDENT_GROUPS_CSV_PATH: &str = "./csvdata/student_groups.csv";
+const CLASSES_CSV_PATH: &str = "./csvdata/classes.csv";
+const ROOMS_CSV_PATH: &str = "./csvdata/rooms.csv";
 use std::error::Error;
-mod column;
 mod class;
+mod column;
 mod room;
 mod student_group;
 mod teacher;
 use class::Class;
+use column::Column;
 use room::Room;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use student_group::StudentGroup;
 use teacher::Teacher;
-use column::Column;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum TableType {
@@ -25,17 +24,17 @@ pub enum TableType {
 }
 
 #[tauri::command]
-pub fn handle_get_table(table_type:String) -> Result<TableType, String> {
+pub fn handle_get_table(table_type: String) -> Result<TableType, String> {
     if table_type == "teachers" {
         let res = Teachers::new().map_err(|e| e.to_string())?;
         return Ok(TableType::Teachers(res));
-    }else if table_type == "studentGroups" {
+    } else if table_type == "studentGroups" {
         let res = StudentGroups::new().map_err(|e| e.to_string())?;
         return Ok(TableType::StudentGroups(res));
-    }else if table_type == "classes" {
+    } else if table_type == "classes" {
         let res = Classes::new().map_err(|e| e.to_string())?;
         return Ok(TableType::Classes(res));
-    }else if table_type == "rooms" {
+    } else if table_type == "rooms" {
         let res = Rooms::new().map_err(|e| e.to_string())?;
         return Ok(TableType::Rooms(res));
     }
@@ -48,23 +47,42 @@ pub struct Classes {
     pub data: Vec<Class>,
 }
 
-
-impl Classes{
-    pub fn new() -> Result<Classes,Box<dyn Error>> {
+impl Classes {
+    pub fn new() -> Result<Classes, Box<dyn Error>> {
         Self::read_csv()
     }
 
-    pub fn read_csv () -> Result<Classes,Box<dyn Error>>{
-        let mut rdr = csv::ReaderBuilder::new().has_headers(false).from_path(CLASSES_CSV_PATH)?;
+    pub fn read_csv() -> Result<Classes, Box<dyn Error>> {
+        let mut rdr = csv::ReaderBuilder::new()
+            .has_headers(false)
+            .from_path(CLASSES_CSV_PATH)?;
         let mut columns = Vec::<Column>::new();
         let mut classes = Vec::<Class>::new();
         let first_record = rdr.records().next().unwrap()?;
-        columns.push(Column{header:first_record[0].to_string(),accessor:"id".to_string()});
-        columns.push(Column{header:first_record[1].to_string(),accessor:"name".to_string()});
-        columns.push(Column{header:first_record[2].to_string(),accessor:"teachers".to_string()});
-        columns.push(Column{header:first_record[3].to_string(),accessor:"candidate_rooms".to_string()});
-        columns.push(Column{header:first_record[4].to_string(),accessor:"student_groups".to_string()});
-        columns.push(Column{header:first_record[5].to_string(),accessor:"num_of_students".to_string()});
+        columns.push(Column {
+            header: first_record[0].to_string(),
+            accessor: "id".to_string(),
+        });
+        columns.push(Column {
+            header: first_record[1].to_string(),
+            accessor: "name".to_string(),
+        });
+        columns.push(Column {
+            header: first_record[2].to_string(),
+            accessor: "teachers".to_string(),
+        });
+        columns.push(Column {
+            header: first_record[3].to_string(),
+            accessor: "candidate_rooms".to_string(),
+        });
+        columns.push(Column {
+            header: first_record[4].to_string(),
+            accessor: "student_groups".to_string(),
+        });
+        columns.push(Column {
+            header: first_record[5].to_string(),
+            accessor: "num_of_students".to_string(),
+        });
         for result in rdr.records() {
             let record = result?;
             let id = record[0].to_string();
@@ -73,11 +91,20 @@ impl Classes{
             let candidate_rooms = record[3].to_string();
             let student_groups = record[4].to_string();
             let num_of_students = record[5].to_string();
-            classes.push(Class{id,name,teachers,candidate_rooms,student_groups,num_of_students});
+            classes.push(Class {
+                id,
+                name,
+                teachers,
+                candidate_rooms,
+                student_groups,
+                num_of_students,
+            });
         }
-        Ok(Classes{columns:columns,data:classes})
+        Ok(Classes {
+            columns: columns,
+            data: classes,
+        })
     }
-    
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -87,25 +114,39 @@ pub struct Rooms {
 }
 
 impl Rooms {
-    pub fn new() -> Result<Rooms,Box<dyn Error>> {
+    pub fn new() -> Result<Rooms, Box<dyn Error>> {
         Self::read_csv()
     }
-    pub fn read_csv () -> Result<Rooms,Box<dyn Error>>{
-        let mut rdr = csv::ReaderBuilder::new().has_headers(false).from_path(ROOMS_CSV_PATH)?;
+    pub fn read_csv() -> Result<Rooms, Box<dyn Error>> {
+        let mut rdr = csv::ReaderBuilder::new()
+            .has_headers(false)
+            .from_path(ROOMS_CSV_PATH)?;
         let mut columns = Vec::<column::Column>::new();
         let mut rooms = Vec::new();
         let first_record = rdr.records().next().unwrap()?;
-        columns.push(column::Column{header:first_record[0].to_string(),accessor:"id".to_string()});
-        columns.push(column::Column{header:first_record[1].to_string(),accessor:"name".to_string()});
-        columns.push(column::Column{header:first_record[2].to_string(),accessor:"capacity".to_string()});
+        columns.push(column::Column {
+            header: first_record[0].to_string(),
+            accessor: "id".to_string(),
+        });
+        columns.push(column::Column {
+            header: first_record[1].to_string(),
+            accessor: "name".to_string(),
+        });
+        columns.push(column::Column {
+            header: first_record[2].to_string(),
+            accessor: "capacity".to_string(),
+        });
         for result in rdr.records() {
             let record = result?;
             let id = record[0].to_string();
             let name = record[1].to_string();
             let capacity = record[2].to_string();
-            rooms.push(Room{id,name,capacity});
+            rooms.push(Room { id, name, capacity });
         }
-        Ok(Rooms{columns:columns,data:rooms})
+        Ok(Rooms {
+            columns: columns,
+            data: rooms,
+        })
     }
 }
 
@@ -116,24 +157,35 @@ pub struct StudentGroups {
 }
 
 impl StudentGroups {
-    pub fn new() -> Result<StudentGroups,Box<dyn Error>> {
+    pub fn new() -> Result<StudentGroups, Box<dyn Error>> {
         Self::read_csv()
     }
 
-    pub fn read_csv () -> Result<StudentGroups,Box<dyn Error>>{
-        let mut rdr = csv::ReaderBuilder::new().has_headers(false).from_path(STUDENT_GROUPS_CSV_PATH)?;
+    pub fn read_csv() -> Result<StudentGroups, Box<dyn Error>> {
+        let mut rdr = csv::ReaderBuilder::new()
+            .has_headers(false)
+            .from_path(STUDENT_GROUPS_CSV_PATH)?;
         let mut columns = Vec::<column::Column>::new();
         let mut student_groups = Vec::new();
         let first_record = rdr.records().next().unwrap()?;
-        columns.push(column::Column{header:first_record[0].to_string(),accessor:"id".to_string()});
-        columns.push(column::Column{header:first_record[1].to_string(),accessor:"name".to_string()});
+        columns.push(column::Column {
+            header: first_record[0].to_string(),
+            accessor: "id".to_string(),
+        });
+        columns.push(column::Column {
+            header: first_record[1].to_string(),
+            accessor: "name".to_string(),
+        });
         for result in rdr.records() {
             let record = result?;
             let id = record[0].to_string();
             let name = record[1].to_string();
-            student_groups.push(StudentGroup{id,name});
+            student_groups.push(StudentGroup { id, name });
         }
-        Ok(StudentGroups{columns:columns,data:student_groups})
+        Ok(StudentGroups {
+            columns: columns,
+            data: student_groups,
+        })
     }
 }
 
@@ -144,22 +196,33 @@ pub struct Teachers {
 }
 
 impl Teachers {
-    pub fn new() -> Result<Teachers,Box<dyn Error>> {
+    pub fn new() -> Result<Teachers, Box<dyn Error>> {
         Self::read_csv()
     }
-    pub fn read_csv () -> Result<Teachers,Box<dyn Error>>{
-        let mut rdr = csv::ReaderBuilder::new().has_headers(false).from_path(TEACHERS_CSV_PATH)?;
+    pub fn read_csv() -> Result<Teachers, Box<dyn Error>> {
+        let mut rdr = csv::ReaderBuilder::new()
+            .has_headers(false)
+            .from_path(TEACHERS_CSV_PATH)?;
         let mut columns = Vec::<column::Column>::new();
         let mut teachers = Vec::new();
         let first_record = rdr.records().next().unwrap()?;
-        columns.push(column::Column{header:first_record[0].to_string(),accessor:"id".to_string()});
-        columns.push(column::Column{header:first_record[1].to_string(),accessor:"name".to_string()});
+        columns.push(column::Column {
+            header: first_record[0].to_string(),
+            accessor: "id".to_string(),
+        });
+        columns.push(column::Column {
+            header: first_record[1].to_string(),
+            accessor: "name".to_string(),
+        });
         for result in rdr.records() {
             let record = result?;
             let id = record[0].to_string();
             let name = record[1].to_string();
-            teachers.push(Teacher{id,name});
+            teachers.push(Teacher { id, name });
         }
-        Ok(Teachers{columns:columns,data:teachers})
+        Ok(Teachers {
+            columns: columns,
+            data: teachers,
+        })
     }
 }
