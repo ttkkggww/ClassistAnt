@@ -37,17 +37,6 @@ impl Ant{
         self.students_times = vec![HashMap::new(); self.parameters.num_of_students as usize];
         for v in shuffled_array.iter(){
             let (to_vertex, to_period) = self.calc_prob_from_v(*v,graph);
-            if *v == 0 {
-                print!("pheromone: ");
-                for i in 0..self.parameters.num_of_rooms as usize{
-                    for j in 0..self.parameters.num_of_periods as usize{
-                        print!("{},", graph.get_pheromone(*v,i,j));
-                    }
-
-                }
-                println!("");
-                println!("to_period: {:?}", to_period);
-            }
             let to:[usize;2];
             if rand::random::<f64>() < self.parameters.ant_prob_random {
                 to = to_vertex[rand::random::<usize>() % to_vertex.len()];
@@ -153,7 +142,6 @@ impl Ant{
                     graph.get_room_ref(room).get_capacity(), graph.get_class_ref(v), period as u64);
                 let pheromone = pre_pheromone.powf(alpha) * heuristics.powf(beta);
                 if v==0 {
-                    println!("v:{} r{} p{} ,pre_pheromone: {}, heuristics: {}, pheromone: {},",v,room,period ,pre_pheromone, heuristics, pheromone);
                 }
                 sum_pheromone += pheromone;
                 to_vertexes.push([room,period]);
@@ -166,6 +154,31 @@ impl Ant{
         }
         (to_vertexes, to_prob)
     }
+
+    pub fn calc_prob_from_v_igunore_visited(&self,v:usize,graph : &Graph) -> (Vec<[usize;2]>,Vec<f64>) {
+        let mut sum_pheromone = 0.0;
+        let mut to_vertexes = Vec::new();
+        let mut to_pheromones = Vec::new();
+        let alpha = self.parameters.alpha;
+        let beta = self.parameters.beta;
+
+        for room in 0..self.parameters.num_of_rooms as usize{
+            for period in 0..self.parameters.num_of_periods as usize{
+                let pre_pheromone = graph.get_pheromone(v,room,period);
+                let heuristics = self.parameters.q / self.calc_edge_length(
+                    graph.get_room_ref(room).get_capacity(), graph.get_class_ref(v), period as u64);
+                let pheromone = pre_pheromone.powf(alpha) * heuristics.powf(beta);
+                if v==0 {
+                }
+                sum_pheromone += pheromone;
+                to_vertexes.push([room,period]);
+                to_pheromones.push(pheromone);
+            }
+        }
+        let mut to_prob = to_pheromones.iter().map(|x| x/sum_pheromone).collect::<Vec<f64>>();
+        (to_vertexes, to_prob)
+    }
+    
 
     fn calc_edge_length(&self, room_capacity: u64,
         class:&Class,period:u64) -> f64{

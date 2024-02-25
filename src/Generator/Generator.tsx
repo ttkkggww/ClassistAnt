@@ -10,8 +10,7 @@ interface GeneratorProps {
 
 
 const Generator: React.FC<GeneratorProps> = ({ tableNames }) => {
-  const [input, setInput] = useState<Input | null>(null);
-  let [timeTable, setTimeTable] = useState({});
+  let [timeTable, setTimeTable] = useState({cells: []} as TimeTable);
   const sendClassData = () => {
     invoke("handle_set_input");
   };
@@ -21,7 +20,6 @@ const Generator: React.FC<GeneratorProps> = ({ tableNames }) => {
   const run_once = () => {
     invoke<TimeTable>("handle_aco_run_once")
       .then((res) => {
-          console.log(res);
           setTimeTable(res);
         }
       )
@@ -35,9 +33,9 @@ const Generator: React.FC<GeneratorProps> = ({ tableNames }) => {
       <button onClick={sendClassData}>convert input</button>
       <button onClick={generate}>set input</button>
       <button onClick={run_once}>next generation</button>
+      <Grid timeTable={timeTable} setTimeTable={setTimeTable}/>
     </div>
   );
-  //<Grid data={timeTable.cell_name} pheromone_256={timeTable.pheromone_256} messages={timeTable.violations_messages} classIds={timeTable.classIds}/>
 };
 
 export default Generator;

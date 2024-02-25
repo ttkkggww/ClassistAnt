@@ -1,13 +1,16 @@
 import React, { useLayoutEffect, useState, useMemo } from "react";
 import styles from "./Grid.module.css";
-import { rgbToHex } from "../../modules/color";
 import { Droppable } from "./Droppable/Droppable";
 import { Draggable } from "./Draggable/Draggable";
 import { DndContext } from "@dnd-kit/core";
-import { invoke } from '@tauri-apps/api/tauri'
 
-interface Cell {
+class ActiveCell {
+    id: number;
     className: string;
+    constructor(id: number, className: string) {
+      this.id = id;
+      this.className = className;
+    }
     teachers?: string[];
     students?: string[];
     color?: string;
@@ -15,47 +18,37 @@ interface Cell {
     size?: number;
 }
 
+class BlankCell {
+    id: number;
+    constructor(id: number) {
+      this.id = id;
+    }
+    size?: number;
+}
+function isActiveCell(cell: Cell): cell is { activeCell: ActiveCell } {
+  return (cell as { activeCell: ActiveCell }).activeCell !== undefined;
+}
+
+type Cell =
+  | { activeCell:ActiveCell }
+  | { blankCell:BlankCell };
 export interface TimeTable {
-    cells: Array<Cell | undefined>;
+    cells: Array<Cell>;
 }
 
 
 interface GridProps {
-  data: string[][];
-  pheromone_256: number[][];
-  messages: string[];
-  classIds: number[][];
+  timeTable: TimeTable;
+  setTimeTable: (timeTable: TimeTable | ((prevTimeTable: TimeTable) => TimeTable)) => void;
+
 }
 
 const GridComponent: React.FC<GridProps> = ({
-  data,
-  pheromone_256,
-  messages,
-  classIds
+  timeTable,
+  setTimeTable
 }) => {
-  const generateGridArray = () => {
-    let result = [];
-    for (let [rowIndex, row] of data.entries()) {
-      for (let [columnIndex, cell] of row.entries()) {
-        result.push({
-          is_empty: cell === "",
-          color_hex: rgbToHex(
-            255,
-            255 - pheromone_256[rowIndex][columnIndex],
-            255 - pheromone_256[rowIndex][columnIndex]
-          ),
-          text: cell,
-          id: rowIndex * row.length + columnIndex,
-          rowIndex: rowIndex,
-          columnIndex: columnIndex,
-          classId: classIds[rowIndex][columnIndex]
-        });
-      }
-    }
-    return result;
-  };
 
-  const [gridArray, setGridArray] = useState(generateGridArray);
+  const {cells} = timeTable;
 
   const handleDragEnd = (event: any) => {
     const { over, active } = event;
@@ -63,63 +56,45 @@ const GridComponent: React.FC<GridProps> = ({
       return;
     }
     console.log(over, active);
-    invoke("handle_one_hot_pheromone",{
-      classId:gridArray[active.id].classId,
-      roomId:gridArray[over.id].rowIndex,
-      periodId:gridArray[over.id].columnIndex
-    });
 
     const swapGridArray = (index1: number, index2: number) => {
-      setGridArray((prevGridArray) => {
-        const newGridArray = [...prevGridArray];
-        [newGridArray[index1], newGridArray[index2]] = [
-          newGridArray[index2],
-          newGridArray[index1],
+      setTimeTable((prevTimeTable:TimeTable) => {
+        const newTimeTable = {...prevTimeTable};
+        [newTimeTable.cells[index1], newTimeTable.cells[index2]] = [
+          newTimeTable.cells[index2],
+          newTimeTable.cells[index1],
         ];
-        newGridArray[index1].id = index1;
-        newGridArray[index2].id = index2;
-        return newGridArray;
+        return newTimeTable as TimeTable;
       });
     };
 
     swapGridArray(active.id, over.id);
   };
 
-  // useMemo を使って依存配列を安定させる
-  const dependencies = useMemo(() => [data, pheromone_256], [data, pheromone_256]);
-
-  // useLayoutEffect の中での state の更新
-  useLayoutEffect(() => {
-    setGridArray(generateGridArray());
-  }, dependencies);
 
   return (
     <div style={{ width: "100%" }}>
       <DndContext onDragEnd={handleDragEnd}>
         <div className={styles["grid-container"]} style={{}}>
-          {gridArray.map((cell, index) => {
-            if (cell.is_empty) {
-              return <Droppable id={index} styles={styles["grid-cell"]} />;
+          {cells.map((cell, index) => {
+            if (isActiveCell(cell)){
+              let cellData = cell.activeCell;
+              return (
+                <Draggable
+                  hex_color={cellData.color??"#ffffff"}
+                  text={cellData.className}
+                  id={cellData.id}
+                  classId={cellData.id}
+                  styles={styles["grid-cell"]}
+                />
+              );
             }
-            return (
-              <Draggable
-                hex_color={cell.color_hex}
-                text={cell.text}
-                id={cell.id}
-                classId={classIds[cell.rowIndex][cell.columnIndex]}
-                styles={styles["grid-cell"]}
-              />
-            );
+            let cellData = cell.blankCell;
+              return <Droppable id={cellData.id} styles={styles["grid-cell"]} />;
           })}
         </div>
       </DndContext>
       <div>
-        {messages.map((str, index) => (
-          <React.Fragment key={index}>
-            {str}
-            {index < messages.length - 1 && <br />}
-          </React.Fragment>
-        ))}
       </div>
     </div>
   );

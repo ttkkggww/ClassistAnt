@@ -59,11 +59,9 @@ impl ACOSolver{
     }
 
     pub fn run_aco_times(&mut self, times: u64){
-        println!("start pheromone:{}",self.colony.get_graph().get_pheromone(0, 0, 0));
         for _ in 0..times{
             self.update_aco();
         }
-        println!("end pheromone:{}",self.colony.get_graph().get_pheromone(0, 0, 0));
     }
 
     pub fn get_super_ant_score(&self) -> f64{
