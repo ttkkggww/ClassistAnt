@@ -8,6 +8,10 @@ use serde::{Deserialize, Serialize};
 use std::{time};
 mod input;
 mod algorithm;
+use std::error::Error;
+mod table_editor;
+use algorithm::time_table;
+
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -83,62 +87,34 @@ fn handle_adapt_input(input_manager: tauri::State<'_,InputManager>,solver_manage
 }
 
 #[tauri::command]
-fn handle_set_input(input_manager: tauri::State<'_,InputManager>, input:input::Input) -> Result<(), String>{
+fn handle_set_input(input_manager: tauri::State<'_,InputManager>) -> Result<(), String>{
     println!("called handle_set_input");
+    let input = input::Input::new();
     let mut managed_input = input_manager.input.lock().unwrap();
     *managed_input = Some(input);
     Ok(())
 }
 
 
-#[derive(Serialize, Deserialize)]
-struct TimeTable{
-    cell_name:Vec<Vec<i64>>,
-    pheromone_256:Vec<Vec<i64>>,
-    same_teachers_violations:Vec<Violations>,
-    same_group_violations:Vec<Violations>,
-    capacity_violations:Vec<Violations>
-}
 
 #[tauri::command]
-fn handle_aco_run_once(solver_manager:tauri::State<'_,ACOSolverManager>) -> Result<TimeTable, String>{
+fn handle_aco_run_once(solver_manager:tauri::State<'_,ACOSolverManager>) -> Result<time_table::TimeTable, String>{
     println!("called handle_aco_run_once");
     let mut managed_solver = solver_manager.solver.lock().unwrap();
     
     if let Some(solver) = managed_solver.as_mut(){
         solver.run_aco_times(1);
-        let parameters = solver.get_parameters();
-        let mut max_pheromone = parameters.q * parameters.num_of_ants as f64 / (1.0-parameters.rou);
-        for class_id in 0..parameters.num_of_classes as usize{
-            for room_id in 0..parameters.num_of_rooms as usize{
-                for period_id in 0..parameters.num_of_periods as usize{
-                    max_pheromone = max_pheromone.max(solver.colony.get_graph().get_pheromone(class_id, room_id, period_id));
-                }
-            }
-        }
-        let mut pheromone = vec![vec![0; parameters.num_of_periods as usize]; parameters.num_of_rooms as usize];
-        if let Some(best_ant) = solver.get_best_ant(){
-            for (class_id,&[room_id,period_id])in best_ant.get_corresponding_crp().iter().enumerate(){
-                pheromone[room_id][period_id] = (solver.colony.get_graph().get_pheromone(class_id,room_id,period_id) / max_pheromone*255.0) as i64;
-            }
-        }
-        println!("best path length: {}", solver.get_best_ant_score());
-        //println!("pheromone: {:?}", pheromone);
-        let res = TimeTable{
-            cell_name:solver.get_class_id_time_table(),
-            pheromone_256:pheromone,
-            same_teachers_violations:solver.get_best_ant_same_teacher_violations(),
-            same_group_violations:solver.get_best_ant_same_group_violations(),
-            capacity_violations:solver.get_best_ant_capacity_violations(),
-        };
+        let res = time_table::convert_solver_to_timetable(solver).map_err(|e|e.to_string())?;
         return Ok(res);
     }
     return Err("No ACOSolver".to_string());
 }
 
 use algorithm::aco::aco_solver::handle_one_hot_pheromone;
+use table_editor::handle_get_table;
 
-fn main() {
+fn main() -> Result<(), Box<dyn Error>>{
+    let input = input::Input::new();
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             greet,
@@ -146,7 +122,8 @@ fn main() {
             handle_adapt_input,
             handle_set_input,
             handle_aco_run_once,
-            handle_one_hot_pheromone
+            handle_one_hot_pheromone,
+            handle_get_table
             ])
         .setup( |app| {
             let input_manager = InputManager{
@@ -162,4 +139,5 @@ fn main() {
         )
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+    Ok(())
 }

@@ -1,14 +1,17 @@
 
+
 use serde::{Deserialize, Serialize};
+use std::{error::Error, io , process};
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Class {
-    id: u64,
-    index: u64,
-    num_of_students: u64,
-    name: String,
-    teacher_indexes: Vec<u64>,
-    room_candidates_indexes: Vec<u64>,
-    students_group_indexes: Vec<u64>,
+    pub id: u64,
+    pub index: u64,
+    pub num_of_students: u64,
+    pub name: String,
+    pub teacher_indexes: Vec<u64>,
+    pub room_candidates_indexes: Vec<u64>,
+    pub students_group_indexes: Vec<u64>,
 }
 
 impl Class{
@@ -24,4 +27,5 @@ impl Class{
     pub fn get_name(&self) -> &String{
         &self.name
     }
+
 }

@@ -1,10 +1,10 @@
 use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Room {
-    id: u64,
-    index: u64,
-    name: String,
-    capacity: u64,
+    pub id: u64,
+    pub index: u64,
+    pub name: String,
+    pub capacity: u64,
 }
 
 impl Room{
