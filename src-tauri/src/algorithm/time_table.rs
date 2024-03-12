@@ -4,6 +4,7 @@ use cell::ActiveCell;
 use cell::BlankCell;
 use cell::Cell;
 use std::error::Error;
+use std::sync::Mutex;
 
 use crate::input::room;
 
@@ -43,6 +44,15 @@ pub fn convert_solver_to_timetable(solver: &ACOSolver) -> Result<TimeTable, Box<
     Ok(TimeTable { cells })
 }
 
+pub struct TimeTableManager {
+    pub timetable_manager: Mutex<Option<TimeTable>>,
+}
+
+pub fn save_timetable(timetable_manager: tauri::State<'_, TimeTableManager>, timetable: TimeTable) {
+    let mut managed_timetable = timetable_manager.timetable_manager.lock().unwrap();
+    *managed_timetable = Some(timetable);
+}
+
 fn calc_pheromone_color(
     solver: &ACOSolver,
     class_id: usize,
@@ -67,3 +77,4 @@ fn calc_pheromone_color(
     }
     return res;
 }
+

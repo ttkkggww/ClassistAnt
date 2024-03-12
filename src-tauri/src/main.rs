@@ -107,6 +107,7 @@ fn handle_set_input(input_manager: tauri::State<'_, InputManager>) -> Result<(),
 #[tauri::command]
 fn handle_aco_run_once(
     solver_manager: tauri::State<'_, ACOSolverManager>,
+    timetable_manager: tauri::State<'_, time_table::TimeTableManager>,
 ) -> Result<time_table::TimeTable, String> {
     println!("called handle_aco_run_once");
     let mut managed_solver = solver_manager.solver.lock().unwrap();
@@ -114,6 +115,7 @@ fn handle_aco_run_once(
     if let Some(solver) = managed_solver.as_mut() {
         solver.run_aco_times(1);
         let res = time_table::convert_solver_to_timetable(solver).map_err(|e| e.to_string())?;
+        time_table::save_timetable(timetable_manager, res.clone());
         return Ok(res);
     }
     return Err("No ACOSolver".to_string());
@@ -143,6 +145,10 @@ fn main() -> Result<(), Box<dyn Error>> {
                 solver: Mutex::new(None),
             };
             app.manage(solver_manager);
+            let timetable_manager = time_table::TimeTableManager {
+                timetable_manager: Mutex::new(None),
+            };
+            app.manage(timetable_manager);
             Ok(())
         })
         .run(tauri::generate_context!())
