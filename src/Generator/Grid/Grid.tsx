@@ -50,7 +50,6 @@ const GridComponent: React.FC<GridProps> = ({ timeTable, setTimeTable }) => {
       return;
     }
     console.log(over, active);
-
     const swapGridArray = (index1: number, index2: number) => {
       setTimeTable((prevTimeTable: TimeTable) => {
         const newTimeTable = { ...prevTimeTable };
@@ -61,7 +60,6 @@ const GridComponent: React.FC<GridProps> = ({ timeTable, setTimeTable }) => {
         return newTimeTable as TimeTable;
       });
     };
-
     swapGridArray(active.id, over.id);
   };
 
@@ -74,6 +72,7 @@ const GridComponent: React.FC<GridProps> = ({ timeTable, setTimeTable }) => {
               let cellData = cell.activeCell;
               return (
                 <Draggable
+                  key = {index}
                   hex_color={cellData.color ?? "#ffffff"}
                   text={cellData.className}
                   id={cellData.id}
@@ -83,7 +82,7 @@ const GridComponent: React.FC<GridProps> = ({ timeTable, setTimeTable }) => {
               );
             }
             let cellData = cell.blankCell;
-            return <Droppable id={cellData.id} styles={styles["grid-cell"]} />;
+            return <Droppable key={index} id={cellData.id} styles={styles["grid-cell"]} />;
           })}
         </div>
       </DndContext>
