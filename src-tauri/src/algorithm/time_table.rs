@@ -3,6 +3,7 @@ mod cell;
 use cell::ActiveCell;
 use cell::BlankCell;
 use cell::Cell;
+use core::time;
 use std::error::Error;
 use std::sync::Mutex;
 
@@ -76,5 +77,24 @@ fn calc_pheromone_color(
         res = format!("#ff{}{}ff", hex, hex);
     }
     return res;
+}
+
+#[tauri::command]
+pub fn handle_lock_cell(timetable_manager: tauri::State<'_, TimeTableManager>, over_id: usize, active_id: usize) -> Result<TimeTable, String> {
+    println!("called handle_lock_cell");
+    println!("over_id:{}", over_id);
+    println!("active_id:{}", active_id);
+    let mut managed_timetable = timetable_manager.timetable_manager.lock().unwrap();
+    let mut new_timetable;
+    if let Some(timetable) = managed_timetable.as_mut() {
+        new_timetable = timetable.clone();
+        new_timetable.cells.swap(active_id, over_id);
+        //TODO:idの入れ替え
+        
+    } else {
+        return Err("No timetable found".to_string());
+    }
+    *managed_timetable = Some(new_timetable.clone());
+    return Ok(new_timetable);
 }
 

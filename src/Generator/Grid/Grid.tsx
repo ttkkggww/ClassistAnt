@@ -1,4 +1,5 @@
 import React, { useLayoutEffect, useState, useMemo } from "react";
+import {invoke} from "@tauri-apps/api/tauri";
 import styles from "./Grid.module.css";
 import { Droppable } from "./Droppable/Droppable";
 import { Draggable } from "./Draggable/Draggable";
@@ -49,18 +50,12 @@ const GridComponent: React.FC<GridProps> = ({ timeTable, setTimeTable }) => {
     if (over == null) {
       return;
     }
-    console.log(over, active);
-    const swapGridArray = (index1: number, index2: number) => {
-      setTimeTable((prevTimeTable: TimeTable) => {
-        const newTimeTable = { ...prevTimeTable };
-        [newTimeTable.cells[index1], newTimeTable.cells[index2]] = [
-          newTimeTable.cells[index2],
-          newTimeTable.cells[index1],
-        ];
-        return newTimeTable as TimeTable;
-      });
-    };
-    swapGridArray(active.id, over.id);
+    invoke<TimeTable>("handle_lock_cell",{overId:Number(over.id),activeId:Number(active.id)})
+    .then((res)=>{
+      setTimeTable(res);
+    }).catch((err)=>{
+      console.log(err);
+    });
   };
 
   return (

@@ -123,9 +123,10 @@ fn handle_aco_run_once(
 
 use algorithm::aco::aco_solver::handle_one_hot_pheromone;
 use table_editor::handle_get_table;
+use time_table::handle_lock_cell;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let input = input::Input::new();
+    //let input = input::Input::new();
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             greet,
@@ -134,7 +135,8 @@ fn main() -> Result<(), Box<dyn Error>> {
             handle_set_input,
             handle_aco_run_once,
             handle_one_hot_pheromone,
-            handle_get_table
+            handle_get_table,
+            handle_lock_cell
         ])
         .setup(|app| {
             let input_manager = InputManager {
