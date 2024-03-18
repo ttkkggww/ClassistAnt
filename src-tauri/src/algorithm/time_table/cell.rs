@@ -11,6 +11,9 @@ pub enum Cell {
 #[serde(rename_all = "camelCase")]
 pub struct ActiveCell {
     pub id: usize,
+    pub period: usize,
+    pub room: usize,
+    pub class_index: usize,
     pub class_name: String,
     pub teachers: Option<Vec<String>>,
     pub students: Option<Vec<String>>,
@@ -22,5 +25,7 @@ pub struct ActiveCell {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BlankCell {
     pub id: usize,
+    pub period: usize,
+    pub room: usize,
     pub size: Option<u64>,
 }

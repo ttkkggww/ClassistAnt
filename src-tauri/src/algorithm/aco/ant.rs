@@ -15,7 +15,9 @@ pub struct Ant {
     visited_roomperiods: Vec<Vec<bool>>,
     corresponding_crp: Vec<[usize; 2]>,
     parameters: AcoParameters,
+    //teachers_times[teacher_id][period] = [room_id, room_id, ...]
     teachers_times: Vec<HashMap<usize, Vec<usize>>>,
+    //teachers_times[teacher_id][period] = [room_id, room_id, ...]
     students_times: Vec<HashMap<usize, Vec<usize>>>,
 }
 
@@ -42,7 +44,41 @@ impl Ant {
         let shuffled_array = Ant::get_shuffled_array(self.parameters.num_of_classes);
         self.teachers_times = vec![HashMap::new(); self.parameters.num_of_teachers as usize];
         self.students_times = vec![HashMap::new(); self.parameters.num_of_students as usize];
+        //preprocess locked classes
         for v in shuffled_array.iter() {
+            if let Some(to) = graph.get_classes_is_locked(*v){
+                println!("locked class: {},to:{:?}", *v,to);
+                self.corresponding_crp[*v] = [to.0,to.1];
+                self.visited_classes[*v] = true;
+                self.visited_roomperiods[to.0][to.1] = true;
+                for i in graph.get_class_ref(*v).get_teacher_indexes().iter() {
+                    if let Some(times) = self.teachers_times.get_mut(*i as usize) {
+                        if let Some(time) = times.get_mut(&to.0) {
+                            time.push(to.0);
+                        } else {
+                            times.insert(to.1, vec![to.0]);
+                        }
+                    }
+                }
+                for i in graph.get_class_ref(*v).get_students_group_indexes().iter() {
+                    if let Some(times) = self.students_times.get_mut(*i as usize) {
+                        if let Some(time) = times.get_mut(&to.1) {
+                            time.push(to.0);
+                        } else {
+                            times.insert(to.1, vec![to.0]);
+                        }
+                    }
+                }
+            }
+        }
+        for v in shuffled_array.iter() {
+            if self.visited_classes[*v] {
+                println!("skip: {}", *v);
+                continue;
+            }
+            if *v == 0 {
+                println!("!");
+            }
             let (to_vertex, to_period) = self.calc_prob_from_v(*v, graph);
             let to: [usize; 2];
             if rand::random::<f64>() < self.parameters.ant_prob_random {

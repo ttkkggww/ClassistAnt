@@ -1,6 +1,7 @@
 use super::aco_parameters::AcoParameters;
-use crate::input::class::Class;
+use crate::input::class::{self, Class};
 use crate::input::room::Room;
+use super::super::time_table::cell::Cell;
 
 #[derive(Clone)]
 pub struct Edge {
@@ -14,6 +15,7 @@ pub struct Edge {
 #[derive(Clone)]
 pub struct Graph {
     edges: Vec<Vec<Vec<Edge>>>,
+    classes_is_locked: Vec<Option<(usize,usize)>>,
     num_of_classes: u64,
     num_of_rooms: u64,
     num_of_periods: u64,
@@ -43,8 +45,10 @@ impl Graph {
             ];
             num_of_classes as usize
         ];
+        let classes_is_locked = vec![None; num_of_classes as usize];
         let mut res = Graph {
             edges: edges,
+            classes_is_locked,
             num_of_classes: parameters.num_of_classes,
             num_of_rooms: parameters.num_of_rooms,
             num_of_periods: parameters.num_of_periods,
@@ -55,6 +59,7 @@ impl Graph {
         res.prepare_graph();
         return res;
     }
+
 
     #[allow(dead_code)]
     pub fn get_max_pheromone(&self) -> f64 {
@@ -93,6 +98,10 @@ impl Graph {
                 }
             }
         }
+    }
+
+    pub fn get_classes_is_locked(&self, class_index: usize) -> Option<(usize,usize)> {
+        return self.classes_is_locked[class_index];
     }
 
     pub fn reset_graph(&mut self) {
@@ -181,5 +190,20 @@ impl Graph {
         }
         self.edges[class_index][room_index][period_index].pheromone =
             self.parameters.q * max_pheromone;
+    }
+
+    pub fn load_cells(&mut self, cells: &Vec<Cell>) {
+        for (i, cell) in cells.iter().enumerate() {
+            match cell {
+                Cell::ActiveCell(active_cell) => {
+                    if let Some(is_locked) = active_cell.is_locked{
+                        if is_locked {
+                            self.classes_is_locked[active_cell.class_index] = Some((active_cell.room, active_cell.period));
+                        }
+                    }
+                }
+                Cell::BlankCell(_) => {}
+            }
+        }
     }
 }

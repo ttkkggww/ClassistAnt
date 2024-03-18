@@ -99,6 +99,9 @@ impl Colony {
     pub fn get_graph(&self) -> &Graph {
         &self.graph
     }
+    pub fn get_graph_as_mut(&mut self) -> &mut Graph {
+        &mut self.graph
+    }
 
     pub fn set_one_hot_pheromone(
         &mut self,

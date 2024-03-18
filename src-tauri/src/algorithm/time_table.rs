@@ -1,4 +1,4 @@
-mod cell;
+pub mod cell;
 
 use cell::ActiveCell;
 use cell::BlankCell;
@@ -24,6 +24,8 @@ pub fn convert_solver_to_timetable(solver: &ACOSolver) -> Result<TimeTable, Box<
         for period in 0..solver.parameters.num_of_periods {
             cells.push(Cell::BlankCell(BlankCell {
                 id: (room * solver.parameters.num_of_periods + period) as usize,
+                room: room as usize,
+                period: period as usize,
                 size: None,
             }));
         }
@@ -34,10 +36,13 @@ pub fn convert_solver_to_timetable(solver: &ACOSolver) -> Result<TimeTable, Box<
         cells[room_id as usize * solver.parameters.num_of_periods as usize + period_id as usize] =
             Cell::ActiveCell(ActiveCell {
                 id: id as usize,
+                period: period_id as usize,
+                room: room_id as usize,
+                class_index: class_id as usize,
                 class_name: classes[class_id].get_name().clone(),
                 teachers: None,
                 students: None,
-                color: Some(calc_pheromone_color(solver, class_id, room_id, period_id)),
+                color: Some(calc_color(solver, class_id, room_id, period_id)),
                 is_locked: None,
                 size: None,
             });
@@ -54,13 +59,13 @@ pub fn save_timetable(timetable_manager: tauri::State<'_, TimeTableManager>, tim
     *managed_timetable = Some(timetable);
 }
 
-fn calc_pheromone_color(
+fn calc_color(
     solver: &ACOSolver,
     class_id: usize,
     room_id: usize,
     period_id: usize,
 ) -> String {
-    let mut res = String::from("FFFFFF");
+    let mut res = String::from("#FFFFFF");
     if let Some(ant) = solver.get_best_ant() {
         let (rp_v, prov_v) =
             ant.calc_prob_from_v_igunore_visited(class_id, solver.colony.get_graph());
@@ -76,21 +81,51 @@ fn calc_pheromone_color(
         let hex = format!("{:02x}", color);
         res = format!("#ff{}{}ff", hex, hex);
     }
+    if let Some(is_lock) = solver.colony.get_graph().get_classes_is_locked(class_id) {
+        if is_lock.0 == room_id as usize && is_lock.1 == period_id as usize {
+            res = "#AAAAFF".to_string();
+        }
+    }
     return res;
 }
 
+
 #[tauri::command]
 pub fn handle_lock_cell(timetable_manager: tauri::State<'_, TimeTableManager>, over_id: usize, active_id: usize) -> Result<TimeTable, String> {
-    println!("called handle_lock_cell");
-    println!("over_id:{}", over_id);
-    println!("active_id:{}", active_id);
     let mut managed_timetable = timetable_manager.timetable_manager.lock().unwrap();
     let mut new_timetable;
     if let Some(timetable) = managed_timetable.as_mut() {
         new_timetable = timetable.clone();
-        new_timetable.cells.swap(active_id, over_id);
-        //TODO:idの入れ替え
-        
+        if let Cell::ActiveCell(active_cell) = new_timetable.cells[active_id].clone() {
+            if let Cell::BlankCell(blank_cell) = new_timetable.cells[over_id].clone() {
+                new_timetable.cells[active_id] = Cell::BlankCell(blank_cell.clone());
+                match &mut new_timetable.cells[active_id] {
+                    Cell::BlankCell(blank_cell) => {
+                        blank_cell.id = active_cell.id;
+                        blank_cell.room = active_cell.room;
+                        blank_cell.period = active_cell.period.clone();
+                    }
+                    _ => (),
+                }
+                new_timetable.cells[over_id] = Cell::ActiveCell(active_cell.clone());
+                match &mut new_timetable.cells[over_id] {
+                    Cell::ActiveCell(active_cell) => {
+                        active_cell.id = blank_cell.id;
+                        active_cell.room = blank_cell.room;
+                        active_cell.period = blank_cell.period;
+                    }
+                    _ => (),
+                }
+                println!("Swaped cells");
+                match &mut new_timetable.cells[over_id] {
+                    Cell::ActiveCell(active_cell) => {
+                        active_cell.is_locked = Some(true);
+                        active_cell.color = Some("#AAAAFF".to_string());
+                    }
+                    _ => (),
+                }
+            }
+        }
     } else {
         return Err("No timetable found".to_string());
     }
