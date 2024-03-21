@@ -197,7 +197,6 @@ pub fn handle_read_cells(solver_manager: tauri::State<'_, ACOSolverManager>,cell
     let mut managed_solver = solver_manager.solver.lock().unwrap();
     if let Some(solver) = managed_solver.as_mut() {
         solver.colony.get_graph_as_mut().load_cells(&cells);
-        println!("read cells");
         return Ok(());
     }
     return Err("solver is not initialized".to_string());

@@ -47,7 +47,6 @@ impl Ant {
         //preprocess locked classes
         for v in shuffled_array.iter() {
             if let Some(to) = graph.get_classes_is_locked(*v){
-                println!("locked class: {},to:{:?}", *v,to);
                 self.corresponding_crp[*v] = [to.0,to.1];
                 self.visited_classes[*v] = true;
                 self.visited_roomperiods[to.0][to.1] = true;
@@ -73,11 +72,7 @@ impl Ant {
         }
         for v in shuffled_array.iter() {
             if self.visited_classes[*v] {
-                println!("skip: {}", *v);
                 continue;
-            }
-            if *v == 0 {
-                println!("!");
             }
             let (to_vertex, to_period) = self.calc_prob_from_v(*v, graph);
             let to: [usize; 2];
