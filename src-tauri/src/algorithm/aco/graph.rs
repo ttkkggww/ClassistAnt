@@ -1,7 +1,7 @@
+use super::super::time_table::cell::Cell;
 use super::aco_parameters::AcoParameters;
 use crate::input::class::{self, Class};
 use crate::input::room::Room;
-use super::super::time_table::cell::Cell;
 
 #[derive(Clone)]
 pub struct Edge {
@@ -15,7 +15,7 @@ pub struct Edge {
 #[derive(Clone)]
 pub struct Graph {
     edges: Vec<Vec<Vec<Edge>>>,
-    classes_is_locked: Vec<Option<(usize,usize)>>,
+    classes_is_locked: Vec<Option<(usize, usize)>>,
     num_of_classes: u64,
     num_of_rooms: u64,
     num_of_periods: u64,
@@ -60,7 +60,6 @@ impl Graph {
         return res;
     }
 
-
     #[allow(dead_code)]
     pub fn get_max_pheromone(&self) -> f64 {
         let mut max_pheromone = 0.0;
@@ -100,7 +99,7 @@ impl Graph {
         }
     }
 
-    pub fn get_classes_is_locked(&self, class_index: usize) -> Option<(usize,usize)> {
+    pub fn get_classes_is_locked(&self, class_index: usize) -> Option<(usize, usize)> {
         return self.classes_is_locked[class_index];
     }
 
@@ -196,9 +195,10 @@ impl Graph {
         for (i, cell) in cells.iter().enumerate() {
             match cell {
                 Cell::ActiveCell(active_cell) => {
-                    if let Some(is_locked) = active_cell.is_locked{
+                    if let Some(is_locked) = active_cell.is_locked {
                         if is_locked {
-                            self.classes_is_locked[active_cell.class_index] = Some((active_cell.room, active_cell.period));
+                            self.classes_is_locked[active_cell.class_index] =
+                                Some((active_cell.room, active_cell.period));
                         }
                     }
                 }

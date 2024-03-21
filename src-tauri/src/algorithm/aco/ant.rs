@@ -46,8 +46,8 @@ impl Ant {
         self.students_times = vec![HashMap::new(); self.parameters.num_of_students as usize];
         //preprocess locked classes
         for v in shuffled_array.iter() {
-            if let Some(to) = graph.get_classes_is_locked(*v){
-                self.corresponding_crp[*v] = [to.0,to.1];
+            if let Some(to) = graph.get_classes_is_locked(*v) {
+                self.corresponding_crp[*v] = [to.0, to.1];
                 self.visited_classes[*v] = true;
                 self.visited_roomperiods[to.0][to.1] = true;
                 for i in graph.get_class_ref(*v).get_teacher_indexes().iter() {

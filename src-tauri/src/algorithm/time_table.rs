@@ -59,12 +59,7 @@ pub fn save_timetable(timetable_manager: tauri::State<'_, TimeTableManager>, tim
     *managed_timetable = Some(timetable);
 }
 
-fn calc_color(
-    solver: &ACOSolver,
-    class_id: usize,
-    room_id: usize,
-    period_id: usize,
-) -> String {
+fn calc_color(solver: &ACOSolver, class_id: usize, room_id: usize, period_id: usize) -> String {
     let mut res = String::from("#FFFFFF");
     if let Some(ant) = solver.get_best_ant() {
         let (rp_v, prov_v) =
@@ -89,9 +84,12 @@ fn calc_color(
     return res;
 }
 
-
 #[tauri::command]
-pub fn handle_lock_cell(timetable_manager: tauri::State<'_, TimeTableManager>, over_id: usize, active_id: usize) -> Result<TimeTable, String> {
+pub fn handle_lock_cell(
+    timetable_manager: tauri::State<'_, TimeTableManager>,
+    over_id: usize,
+    active_id: usize,
+) -> Result<TimeTable, String> {
     let mut managed_timetable = timetable_manager.timetable_manager.lock().unwrap();
     let mut new_timetable;
     if let Some(timetable) = managed_timetable.as_mut() {
@@ -132,4 +130,3 @@ pub fn handle_lock_cell(timetable_manager: tauri::State<'_, TimeTableManager>, o
     *managed_timetable = Some(new_timetable.clone());
     return Ok(new_timetable);
 }
-
