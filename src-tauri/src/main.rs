@@ -125,6 +125,7 @@ use algorithm::aco::aco_solver::handle_one_hot_pheromone;
 use algorithm::aco::aco_solver::handle_read_cells;
 use table_editor::handle_get_table;
 use time_table::handle_lock_cell;
+use time_table::handle_switch_lock;
 
 fn main() -> Result<(), Box<dyn Error>> {
     //let input = input::Input::new();
@@ -138,7 +139,8 @@ fn main() -> Result<(), Box<dyn Error>> {
             handle_one_hot_pheromone,
             handle_get_table,
             handle_lock_cell,
-            handle_read_cells
+            handle_read_cells,
+            handle_switch_lock
         ])
         .setup(|app| {
             let input_manager = InputManager {

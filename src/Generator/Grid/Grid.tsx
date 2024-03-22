@@ -73,6 +73,7 @@ const GridComponent: React.FC<GridProps> = ({ timeTable, setTimeTable }) => {
                   id={cellData.id}
                   classId={cellData.id}
                   styles={styles["grid-cell"]}
+                  setTimeTable={setTimeTable}
                 />
               );
             }

@@ -199,7 +199,11 @@ impl Graph {
                         if is_locked {
                             self.classes_is_locked[active_cell.class_index] =
                                 Some((active_cell.room, active_cell.period));
+                        } else {
+                            self.classes_is_locked[active_cell.class_index] = None;
                         }
+                    } else {
+                        self.classes_is_locked[active_cell.class_index] = None;
                     }
                 }
                 Cell::BlankCell(_) => {}

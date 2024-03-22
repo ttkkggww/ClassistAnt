@@ -1,10 +1,17 @@
 use serde::{Deserialize, Serialize};
+use std::convert::AsMut;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub enum Cell {
     ActiveCell(ActiveCell),
     BlankCell(BlankCell),
+}
+
+impl AsMut<Cell> for Cell {
+    fn as_mut(&mut self) -> &mut Cell {
+        return self;
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
