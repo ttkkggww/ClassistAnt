@@ -1,3 +1,4 @@
+use super::super::time_table::cell::Cell;
 use super::aco_parameters::AcoParameters;
 use super::ant::Ant;
 use super::colony::Colony;
@@ -189,4 +190,17 @@ pub fn handle_one_hot_pheromone(
         solver.set_one_hot_pheromone(class_id, room_id, period_id);
     }
     Ok(())
+}
+
+#[tauri::command]
+pub fn handle_read_cells(
+    solver_manager: tauri::State<'_, ACOSolverManager>,
+    cells: Vec<Cell>,
+) -> Result<(), String> {
+    let mut managed_solver = solver_manager.solver.lock().unwrap();
+    if let Some(solver) = managed_solver.as_mut() {
+        solver.colony.get_graph_as_mut().load_cells(&cells);
+        return Ok(());
+    }
+    return Err("solver is not initialized".to_string());
 }

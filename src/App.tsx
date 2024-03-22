@@ -19,15 +19,15 @@ function App() {
     <div className={styles.app}>
       <Tabs>
         <TabList>
-          {tableNames.map((name) => (
-            <Tab>{name}</Tab>
+          {tableNames.map((name,index) => (
+            <Tab key={index}>{name}</Tab>
           ))}
           <Tab>時間割生成</Tab>
         </TabList>
         {tableNames.map((name, i) => (
           <TabPanel key={name}>
             {/* 各タブに CsvTable コンポーネントを配置 */}
-            <TableEditor tableName={name} />
+            <TableEditor key={i} tableName={name} />
           </TabPanel>
         ))}
         <TabPanel>

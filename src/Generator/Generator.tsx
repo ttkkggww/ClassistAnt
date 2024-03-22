@@ -17,6 +17,9 @@ const Generator: React.FC<GeneratorProps> = ({ tableNames }) => {
     invoke("handle_adapt_input");
   };
   const run_once = () => {
+    if (timeTable.cells.length != 0){
+      invoke("handle_read_cells",{cells:timeTable.cells});
+    }
     invoke<TimeTable>("handle_aco_run_once")
       .then((res) => {
         setTimeTable(res);

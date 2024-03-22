@@ -1,4 +1,5 @@
 import React, { useLayoutEffect, useState, useMemo } from "react";
+import {invoke} from "@tauri-apps/api/tauri";
 import styles from "./Grid.module.css";
 import { Droppable } from "./Droppable/Droppable";
 import { Draggable } from "./Draggable/Draggable";
@@ -49,20 +50,12 @@ const GridComponent: React.FC<GridProps> = ({ timeTable, setTimeTable }) => {
     if (over == null) {
       return;
     }
-    console.log(over, active);
-
-    const swapGridArray = (index1: number, index2: number) => {
-      setTimeTable((prevTimeTable: TimeTable) => {
-        const newTimeTable = { ...prevTimeTable };
-        [newTimeTable.cells[index1], newTimeTable.cells[index2]] = [
-          newTimeTable.cells[index2],
-          newTimeTable.cells[index1],
-        ];
-        return newTimeTable as TimeTable;
-      });
-    };
-
-    swapGridArray(active.id, over.id);
+    invoke<TimeTable>("handle_lock_cell",{overId:Number(over.id),activeId:Number(active.id)})
+    .then((res)=>{
+      setTimeTable(res);
+    }).catch((err)=>{
+      console.log(err);
+    });
   };
 
   return (
@@ -74,16 +67,18 @@ const GridComponent: React.FC<GridProps> = ({ timeTable, setTimeTable }) => {
               let cellData = cell.activeCell;
               return (
                 <Draggable
+                  key = {index}
                   hex_color={cellData.color ?? "#ffffff"}
                   text={cellData.className}
                   id={cellData.id}
                   classId={cellData.id}
                   styles={styles["grid-cell"]}
+                  setTimeTable={setTimeTable}
                 />
               );
             }
             let cellData = cell.blankCell;
-            return <Droppable id={cellData.id} styles={styles["grid-cell"]} />;
+            return <Droppable key={index} id={cellData.id} styles={styles["grid-cell"]} />;
           })}
         </div>
       </DndContext>
