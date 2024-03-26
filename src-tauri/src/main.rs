@@ -23,11 +23,11 @@ fn handle_input(input: input::Input) -> Result<(), String> {
     println!("called handle_input");
     let parameters = algorithm::aco::aco_parameters::AcoParameters {
         num_of_ants: 5,
-        num_of_classes: input.get_classes().len() as u64,
-        num_of_rooms: input.get_rooms().len() as u64,
+        num_of_classes: input.get_classes().len() as usize,
+        num_of_rooms: input.get_rooms().len() as usize,
         num_of_periods: 5 * 5,
-        num_of_teachers: input.get_teachers().len() as u64,
-        num_of_students: input.get_student_groups().len() as u64,
+        num_of_teachers: input.get_teachers().len() as usize,
+        num_of_students: input.get_student_groups().len() as usize,
         q: 1.0,
         alpha: 1.0,
         beta: 1.0,
@@ -57,11 +57,11 @@ fn handle_adapt_input(
         println!("adapt input to solver.");
         let parameters = algorithm::aco::aco_parameters::AcoParameters {
             num_of_ants: 3,
-            num_of_classes: input.get_classes().len() as u64,
-            num_of_rooms: input.get_rooms().len() as u64,
+            num_of_classes: input.get_classes().len(),
+            num_of_rooms: input.get_rooms().len(),
             num_of_periods: 5 * 5,
-            num_of_teachers: input.get_teachers().len() as u64,
-            num_of_students: input.get_student_groups().len() as u64,
+            num_of_teachers: input.get_teachers().len(),
+            num_of_students: input.get_student_groups().len(),
             q: 10.0,
             alpha: 1.0,
             beta: 1.0,

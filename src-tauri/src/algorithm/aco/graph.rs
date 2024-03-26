@@ -5,7 +5,7 @@ use crate::input::room::Room;
 
 #[derive(Clone)]
 pub struct Edge {
-    to: [u64; 2],
+    to: [usize; 2],
     length: f64,
     pheromone: f64,
     heuristic: f64,
@@ -16,9 +16,9 @@ pub struct Edge {
 pub struct Graph {
     edges: Vec<Vec<Vec<Edge>>>,
     classes_is_locked: Vec<Option<(usize, usize)>>,
-    num_of_classes: u64,
-    num_of_rooms: u64,
-    num_of_periods: u64,
+    num_of_classes: usize,
+    num_of_rooms: usize,
+    num_of_periods: usize,
     parameters: AcoParameters,
     classes: Vec<Class>,
     rooms: Vec<Room>,
@@ -59,6 +59,9 @@ impl Graph {
         res.prepare_graph();
         return res;
     }
+    pub fn get_class(&self, index: usize) -> &Class {
+        return &self.classes[index];
+    }
 
     #[allow(dead_code)]
     pub fn get_max_pheromone(&self) -> f64 {
@@ -75,7 +78,7 @@ impl Graph {
         max_pheromone
     }
 
-    fn calc_edge_length(&self, p1: u64, p2: u64) -> f64 {
+    fn calc_edge_length(&self, p1: usize, p2: usize) -> f64 {
         if p1 == p2 {
             return 1 as f64;
         }
@@ -89,8 +92,8 @@ impl Graph {
         for i in 0..self.num_of_classes as usize {
             for j in 0..self.num_of_rooms as usize {
                 for k in 0..self.num_of_periods as usize {
-                    self.edges[i][j][k].to = [j as u64, k as u64];
-                    self.edges[i][j][k].length = self.calc_edge_length(i as u64, j as u64);
+                    self.edges[i][j][k].to = [j as usize, k as usize];
+                    self.edges[i][j][k].length = self.calc_edge_length(i as usize, j as usize);
                     self.edges[i][j][k].pheromone = self.parameters.q;
                     self.edges[i][j][k].heuristic = self.parameters.q / self.edges[i][j][k].length;
                     self.edges[i][j][k].next_pheromone = 0.0;

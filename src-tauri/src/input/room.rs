@@ -1,14 +1,14 @@
 use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Room {
-    pub id: u64,
-    pub index: u64,
+    pub id: usize,
+    pub index: usize,
     pub name: String,
-    pub capacity: u64,
+    pub capacity: usize,
 }
 
 impl Room {
-    pub fn get_capacity(&self) -> u64 {
+    pub fn get_capacity(&self) -> usize {
         self.capacity
     }
 }

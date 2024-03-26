@@ -8,4 +8,5 @@ pub struct Class {
     pub candidate_rooms: String,
     pub student_groups: String,
     pub num_of_students: String,
+    pub serial_size: String,
 }

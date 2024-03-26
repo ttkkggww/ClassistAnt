@@ -51,9 +51,9 @@ impl Input {
         let mut teachers = Vec::new();
         for (index, result) in rdr.records().enumerate() {
             let record = result?;
-            let id = record[0].parse::<u64>().unwrap();
+            let id = record[0].parse::<usize>().unwrap();
             let name = record[1].to_string();
-            let index = index as u64;
+            let index = index as usize;
             teachers.push(teacher::Teacher { id, index, name });
         }
 
@@ -67,10 +67,10 @@ impl Input {
         let mut rooms = Vec::new();
         for (index, result) in rdr.records().enumerate() {
             let record = result?;
-            let index = index as u64;
-            let id = record[0].parse::<u64>().unwrap();
+            let index = index as usize;
+            let id = record[0].parse::<usize>().unwrap();
             let name = record[1].to_string();
-            let capacity = record[2].parse::<u64>().unwrap();
+            let capacity = record[2].parse::<usize>().unwrap();
             rooms.push(room::Room {
                 id,
                 index,
@@ -90,9 +90,9 @@ impl Input {
         let mut student_groups = Vec::new();
         for (index, result) in rdr.records().enumerate() {
             let record = result?;
-            let id = record[0].parse::<u64>().unwrap();
+            let id = record[0].parse::<usize>().unwrap();
             let name = record[1].to_string();
-            let index = index as u64;
+            let index = index as usize;
             student_groups.push(student_group::StudentGroup { id, index, name });
         }
         Ok(student_groups)
@@ -111,13 +111,13 @@ impl Input {
 
         for (index, result) in rdr.records().enumerate() {
             let record = result?;
-            let index = index as u64;
-            let id = record[0].parse::<u64>().unwrap();
+            let index = index as usize;
+            let id = record[0].parse::<usize>().unwrap();
             let name = record[1].to_string();
             let mut teacher_indexes = Vec::new();
             for i in record[2].split(",") {
                 if let Some(add) = teachers.iter().position(|x| x.name == i) {
-                    teacher_indexes.push(add as u64);
+                    teacher_indexes.push(add as usize);
                 } else {
                     panic!("teacher not found");
                 }
@@ -125,7 +125,7 @@ impl Input {
             let mut room_candidates_indexes = Vec::new();
             for i in record[3].split(",") {
                 if let Some(add) = rooms.iter().position(|x| x.name == i) {
-                    room_candidates_indexes.push(add as u64);
+                    room_candidates_indexes.push(add as usize);
                 } else {
                     panic!("room not found");
                 }
@@ -133,12 +133,13 @@ impl Input {
             let mut students_group_indexes = Vec::new();
             for i in record[4].split(",") {
                 if let Some(add) = student_groups.iter().position(|x| x.name == i) {
-                    students_group_indexes.push(add as u64);
+                    students_group_indexes.push(add as usize);
                 } else {
                     panic!("student_group not found");
                 }
             }
-            let num_of_students = record[5].parse::<u64>().unwrap();
+            let num_of_students = record[5].parse::<usize>().unwrap();
+            let serial_size = record[6].parse::<usize>().unwrap();
             classes.push(class::Class {
                 id,
                 index,
@@ -147,6 +148,7 @@ impl Input {
                 teacher_indexes,
                 room_candidates_indexes,
                 students_group_indexes,
+                serial_size,
             });
         }
         Ok(classes)

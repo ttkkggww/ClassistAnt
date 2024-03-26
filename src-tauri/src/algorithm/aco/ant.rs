@@ -40,36 +40,44 @@ impl Ant {
         };
     }
 
+    fn allocate_classes(&mut self, class_index: usize, room_index: usize, period_index: usize, graph: &Graph) {
+        self.corresponding_crp[class_index] = [room_index, period_index];
+        self.visited_classes[class_index] = true;
+        self.visited_roomperiods[room_index][period_index] = true;
+        //get teacher indexes in classes,then add time;
+
+        for teacher_index in graph.get_class_ref(class_index).get_teacher_indexes().iter() {
+            if let Some(times) = self.teachers_times.get_mut(*teacher_index as usize) {
+                if let Some(time) = times.get_mut(&period_index) {
+                    time.push(room_index);
+                } else {
+                    times.insert(period_index, vec![room_index]);
+                }
+            }
+        }
+        //get student group indexes in classes,then add time;
+        for student_index in graph.get_class_ref(class_index).get_students_group_indexes().iter() {
+            if let Some(times) = self.students_times.get_mut(*student_index as usize) {
+                if let Some(time) = times.get_mut(&period_index) {
+                    time.push(room_index);
+                } else {
+                    times.insert(period_index, vec![room_index]);
+                }
+            }
+        }
+    }
+
     pub fn construct_path(&mut self, graph: &Graph) {
         let shuffled_array = Ant::get_shuffled_array(self.parameters.num_of_classes);
         self.teachers_times = vec![HashMap::new(); self.parameters.num_of_teachers as usize];
         self.students_times = vec![HashMap::new(); self.parameters.num_of_students as usize];
-        //preprocess locked classes
+        //preallocate locked classes
         for v in shuffled_array.iter() {
             if let Some(to) = graph.get_classes_is_locked(*v) {
-                self.corresponding_crp[*v] = [to.0, to.1];
-                self.visited_classes[*v] = true;
-                self.visited_roomperiods[to.0][to.1] = true;
-                for i in graph.get_class_ref(*v).get_teacher_indexes().iter() {
-                    if let Some(times) = self.teachers_times.get_mut(*i as usize) {
-                        if let Some(time) = times.get_mut(&to.0) {
-                            time.push(to.0);
-                        } else {
-                            times.insert(to.1, vec![to.0]);
-                        }
-                    }
-                }
-                for i in graph.get_class_ref(*v).get_students_group_indexes().iter() {
-                    if let Some(times) = self.students_times.get_mut(*i as usize) {
-                        if let Some(time) = times.get_mut(&to.1) {
-                            time.push(to.0);
-                        } else {
-                            times.insert(to.1, vec![to.0]);
-                        }
-                    }
-                }
+                self.allocate_classes(*v, to.0, to.1,graph);
             }
         }
+        //allocate with pheromone
         for v in shuffled_array.iter() {
             if self.visited_classes[*v] {
                 continue;
@@ -82,27 +90,7 @@ impl Ant {
                 let random_p = rand::random::<f64>();
                 to = to_vertex[to_period.iter().position(|&x| x > random_p).unwrap()];
             }
-            self.corresponding_crp[*v] = to;
-            self.visited_classes[*v] = true;
-            self.visited_roomperiods[to[0]][to[1]] = true;
-            for i in graph.get_class_ref(*v).get_teacher_indexes().iter() {
-                if let Some(times) = self.teachers_times.get_mut(*i as usize) {
-                    if let Some(time) = times.get_mut(&to[1]) {
-                        time.push(to[0]);
-                    } else {
-                        times.insert(to[1], vec![to[0]]);
-                    }
-                }
-            }
-            for i in graph.get_class_ref(*v).get_students_group_indexes().iter() {
-                if let Some(times) = self.students_times.get_mut(*i as usize) {
-                    if let Some(time) = times.get_mut(&to[1]) {
-                        time.push(to[0]);
-                    } else {
-                        times.insert(to[1], vec![to[0]]);
-                    }
-                }
-            }
+            self.allocate_classes(*v, to[0], to[1],graph);
         }
     }
 
@@ -165,6 +153,21 @@ impl Ant {
         length
     }
 
+    fn calc_allocatable_room_periods(&self, serial_size:usize, graph: &Graph) -> Vec<[usize; 2]> {
+        let mut res = Vec::new();
+        for room in 0..self.parameters.num_of_rooms as usize {
+            for period in 0..(self.parameters.num_of_periods-serial_size) as usize {
+                let is_allocatable = true;
+                for i in 0..serial_size {
+                    if self.visited_roomperiods[room][period + i] == true {
+                        break;
+                    }
+                }
+            }
+        }
+        res
+    }
+
     fn calc_prob_from_v(&self, v: usize, graph: &Graph) -> (Vec<[usize; 2]>, Vec<f64>) {
         let mut sum_pheromone = 0.0;
         let mut to_vertexes = Vec::new();
@@ -182,7 +185,7 @@ impl Ant {
                     / self.calc_edge_length(
                         graph.get_room_ref(room).get_capacity(),
                         graph.get_class_ref(v),
-                        period as u64,
+                        period as usize,
                     );
                 let pheromone = pre_pheromone.powf(alpha) * heuristics.powf(beta);
                 if v == 0 {}
@@ -219,7 +222,7 @@ impl Ant {
                     / self.calc_edge_length(
                         graph.get_room_ref(room).get_capacity(),
                         graph.get_class_ref(v),
-                        period as u64,
+                        period as usize,
                     );
                 let pheromone = pre_pheromone.powf(alpha) * heuristics.powf(beta);
                 if v == 0 {}
@@ -235,7 +238,7 @@ impl Ant {
         (to_vertexes, to_prob)
     }
 
-    fn calc_edge_length(&self, room_capacity: u64, class: &Class, period: u64) -> f64 {
+    fn calc_edge_length(&self, room_capacity: usize, class: &Class, period: usize) -> f64 {
         let mut edge_length = 1.0;
         if class.get_num_of_students() > room_capacity {
             edge_length += CAP_COEF;
@@ -259,7 +262,7 @@ impl Ant {
         edge_length
     }
 
-    fn get_shuffled_array(num_of_classes: u64) -> Vec<usize> {
+    fn get_shuffled_array(num_of_classes: usize) -> Vec<usize> {
         let mut array = Vec::new();
         for i in 0..num_of_classes as usize {
             array.push(i);
@@ -287,7 +290,7 @@ impl Ant {
         for (_, mp) in (&self.teachers_times).iter().enumerate() {
             for (period_id, time) in mp {
                 if time.len() > 1 {
-                    let violations = Violations::new(*period_id as u64, time.clone());
+                    let violations = Violations::new(*period_id as usize, time.clone());
                     res.push(violations);
                 }
             }
@@ -299,7 +302,7 @@ impl Ant {
         for (_, mp) in (&self.students_times).iter().enumerate() {
             for (period_id, time) in mp {
                 if time.len() > 1 {
-                    let violations = Violations::new(*period_id as u64, time.clone());
+                    let violations = Violations::new(*period_id as usize, time.clone());
                     res.push(violations);
                 }
             }
@@ -316,7 +319,7 @@ impl Ant {
             {
                 let mut v = Vec::new();
                 v.push(class_id);
-                let violations = Violations::new(period as u64, v);
+                let violations = Violations::new(period as usize, v);
                 res.push(violations);
             }
         }

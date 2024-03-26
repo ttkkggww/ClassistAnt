@@ -14,7 +14,7 @@ pub struct ACOSolver {
     pub colony: Colony,
     pub best_ant: Option<Ant>,
     pub super_ant: Option<Ant>,
-    pub cnt_super_not_change: u64,
+    pub cnt_super_not_change: usize,
     pub input: Input,
 }
 
@@ -66,7 +66,7 @@ impl ACOSolver {
         }
     }
 
-    pub fn run_aco_times(&mut self, times: u64) {
+    pub fn run_aco_times(&mut self, times: usize) {
         for _ in 0..times {
             self.update_aco();
         }

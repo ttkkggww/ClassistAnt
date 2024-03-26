@@ -3,23 +3,24 @@ use std::{error::Error, io, process};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Class {
-    pub id: u64,
-    pub index: u64,
-    pub num_of_students: u64,
+    pub id: usize,
+    pub index: usize,
+    pub num_of_students: usize,
     pub name: String,
-    pub teacher_indexes: Vec<u64>,
-    pub room_candidates_indexes: Vec<u64>,
-    pub students_group_indexes: Vec<u64>,
+    pub teacher_indexes: Vec<usize>,
+    pub room_candidates_indexes: Vec<usize>,
+    pub students_group_indexes: Vec<usize>,
+    pub serial_size: usize
 }
 
 impl Class {
-    pub fn get_num_of_students(&self) -> u64 {
+    pub fn get_num_of_students(&self) -> usize {
         self.num_of_students
     }
-    pub fn get_teacher_indexes(&self) -> &Vec<u64> {
+    pub fn get_teacher_indexes(&self) -> &Vec<usize> {
         &self.teacher_indexes
     }
-    pub fn get_students_group_indexes(&self) -> &Vec<u64> {
+    pub fn get_students_group_indexes(&self) -> &Vec<usize> {
         &self.students_group_indexes
     }
     pub fn get_name(&self) -> &String {
