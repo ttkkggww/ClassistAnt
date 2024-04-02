@@ -7,12 +7,6 @@
   grid-auto-flow: row;
 }
 
-.grid-row {
-    /*
-  display: grid;
-  grid-template-columns: repeat(3, 50px);
-  */
-}
 
 .grid-cell {
   height: 25px;

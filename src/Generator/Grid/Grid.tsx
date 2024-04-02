@@ -21,8 +21,14 @@ class ActiveCell {
 
 class BlankCell {
   id: number;
-  constructor(id: number) {
+  period: number;
+  room:number;
+  isVisible: boolean;
+  constructor(id: number, period: number, room: number) {
     this.id = id;
+    this.period = period;
+    this.room = room;
+    this.isVisible = false;
   }
   size?: number;
 }
@@ -73,12 +79,17 @@ const GridComponent: React.FC<GridProps> = ({ timeTable, setTimeTable }) => {
                   id={cellData.id}
                   classId={cellData.id}
                   styles={styles["grid-cell"]}
+                  grid_size={cellData.size ?? 1}
                   setTimeTable={setTimeTable}
                 />
               );
+            }else if(cell.blankCell.isVisible){
+              let cellData = cell.blankCell;
+              return <Droppable key={index} 
+              id={cellData.id} 
+              styles={styles["grid-cell"]} 
+              grid_size={cellData.size??1} />;
             }
-            let cellData = cell.blankCell;
-            return <Droppable key={index} id={cellData.id} styles={styles["grid-cell"]} />;
           })}
         </div>
       </DndContext>

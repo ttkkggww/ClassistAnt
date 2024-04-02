@@ -41,27 +41,33 @@ impl Ant {
     }
 
     fn allocate_classes(&mut self, class_index: usize, room_index: usize, period_index: usize, graph: &Graph) {
+        let serial_size = graph.get_class(class_index).serial_size;
         self.corresponding_crp[class_index] = [room_index, period_index];
         self.visited_classes[class_index] = true;
-        self.visited_roomperiods[room_index][period_index] = true;
+        for i in 0..serial_size {
+            self.visited_roomperiods[room_index][period_index + i] = true;
+        }
         //get teacher indexes in classes,then add time;
-
         for teacher_index in graph.get_class_ref(class_index).get_teacher_indexes().iter() {
             if let Some(times) = self.teachers_times.get_mut(*teacher_index as usize) {
-                if let Some(time) = times.get_mut(&period_index) {
-                    time.push(room_index);
-                } else {
-                    times.insert(period_index, vec![room_index]);
+                for i in 0..serial_size {
+                    if let Some(time) = times.get_mut(&(period_index + i)) {
+                        time.push(room_index);
+                    } else {
+                        times.insert(period_index + i, vec![room_index]);
+                    }
                 }
             }
         }
         //get student group indexes in classes,then add time;
         for student_index in graph.get_class_ref(class_index).get_students_group_indexes().iter() {
             if let Some(times) = self.students_times.get_mut(*student_index as usize) {
-                if let Some(time) = times.get_mut(&period_index) {
-                    time.push(room_index);
-                } else {
-                    times.insert(period_index, vec![room_index]);
+                for i in 0..serial_size {
+                    if let Some(time) = times.get_mut(&(period_index + i)) {
+                        time.push(room_index);
+                    } else {
+                        times.insert(period_index + i, vec![room_index]);
+                    }
                 }
             }
         }
@@ -156,12 +162,16 @@ impl Ant {
     fn calc_allocatable_room_periods(&self, serial_size:usize, graph: &Graph) -> Vec<[usize; 2]> {
         let mut res = Vec::new();
         for room in 0..self.parameters.num_of_rooms as usize {
-            for period in 0..(self.parameters.num_of_periods-serial_size) as usize {
-                let is_allocatable = true;
+            for period in 0..(self.parameters.num_of_periods-serial_size+1) as usize {
+                let mut is_allocatable = true;
                 for i in 0..serial_size {
                     if self.visited_roomperiods[room][period + i] == true {
+                        is_allocatable = false;
                         break;
                     }
+                }
+                if is_allocatable {
+                    res.push([room, period]);
                 }
             }
         }
@@ -174,25 +184,21 @@ impl Ant {
         let mut to_pheromones = Vec::new();
         let alpha = self.parameters.alpha;
         let beta = self.parameters.beta;
+        let serial_size = graph.get_class(v).serial_size;
 
-        for room in 0..self.parameters.num_of_rooms as usize {
-            for period in 0..self.parameters.num_of_periods as usize {
-                if self.visited_roomperiods[room][period] == true {
-                    continue;
-                }
-                let pre_pheromone = graph.get_pheromone(v, room, period);
-                let heuristics = self.parameters.q
-                    / self.calc_edge_length(
-                        graph.get_room_ref(room).get_capacity(),
-                        graph.get_class_ref(v),
-                        period as usize,
-                    );
-                let pheromone = pre_pheromone.powf(alpha) * heuristics.powf(beta);
-                if v == 0 {}
-                sum_pheromone += pheromone;
-                to_vertexes.push([room, period]);
-                to_pheromones.push(pheromone);
-            }
+        for [room,period] in self.calc_allocatable_room_periods(serial_size, graph){
+            let pre_pheromone = graph.get_pheromone(v, room, period);
+            let heuristics = self.parameters.q
+                / self.calc_edge_length(
+                    graph.get_room_ref(room).get_capacity(),
+                    graph.get_class_ref(v),
+                    period as usize,
+                );
+            let pheromone = pre_pheromone.powf(alpha) * heuristics.powf(beta);
+            if v == 0 {}
+            sum_pheromone += pheromone;
+            to_vertexes.push([room, period]);
+            to_pheromones.push(pheromone);
         }
         let mut to_prob = to_pheromones
             .iter()

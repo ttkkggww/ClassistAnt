@@ -21,6 +21,7 @@ pub struct TimeTable {
 
 pub fn convert_solver_to_timetable(solver: &ACOSolver) -> Result<TimeTable, Box<dyn Error>> {
     let mut cells = Vec::<Cell>::new();
+    //TODO:ここの変換の調整
     let best_ant = solver.get_best_ant().ok_or("No best ant found")?;
     for room in 0..solver.parameters.num_of_rooms {
         for period in 0..solver.parameters.num_of_periods {
@@ -28,7 +29,8 @@ pub fn convert_solver_to_timetable(solver: &ACOSolver) -> Result<TimeTable, Box<
                 id: (room * solver.parameters.num_of_periods + period) as usize,
                 room: room as usize,
                 period: period as usize,
-                size: None,
+                is_visible: true,
+                size: Some(1),
             }));
         }
     }
@@ -41,7 +43,7 @@ pub fn convert_solver_to_timetable(solver: &ACOSolver) -> Result<TimeTable, Box<
                 period: period_id as usize,
                 room: room_id as usize,
                 class_index: class_id as usize,
-                class_name: classes[class_id].get_name().clone(),
+                class_name: format!("{}:{}",id.to_string(),(classes[class_id].get_name().clone())),
                 teachers: None,
                 students: None,
                 color: Some(calc_color_init(solver, class_id, room_id, period_id)),
@@ -50,9 +52,26 @@ pub fn convert_solver_to_timetable(solver: &ACOSolver) -> Result<TimeTable, Box<
                     .get_graph()
                     .get_classes_is_locked(class_id)
                     .map(|_| true),
-                size: None,
+                size: Some(classes[class_id].serial_size),
             });
     }
+
+    for index in 0..cells.len(){
+        match cells[index].clone(){
+            Cell::ActiveCell(active_cell) => {
+                for j in (index+1)..(index+active_cell.size.unwrap_or(1)){
+                    match cells[j].as_mut(){
+                        Cell::BlankCell(blank_cell) => {
+                            blank_cell.is_visible = false;
+                        },
+                        _ => (),
+                    }
+                }
+            },
+            _ => (),
+        }
+    }
+
     Ok(TimeTable { cells })
 }
 
@@ -116,6 +135,27 @@ fn calc_color_from_cell(solver: &ACOSolver, active_cell: &ActiveCell) -> String 
     return get_pheromone_color(solver, class_id, room_id, period_id);
 }
 
+pub fn is_swappable(
+    timetable_manager: tauri::State<'_, TimeTableManager>,
+    over_id: usize,
+    active_id: usize,
+) -> Result<bool, String> {
+    //TODO:週をまたぐのも禁止するしょりを書く
+    let managed_timetable = timetable_manager.timetable_manager.lock().unwrap();
+
+    let mut is_swappable = true;
+    if let Some(timetable) = managed_timetable.as_ref() {
+        if let Cell::ActiveCell(active_cell) = timetable.cells[active_id].clone() {
+            for index in over_id..(over_id + active_cell.size.unwrap_or(1)) {
+                if let Cell::ActiveCell(_) = timetable.cells[index].clone() {
+                    is_swappable = false;
+                }
+            }
+        }
+    }
+    return Ok(is_swappable);
+}
+
 #[tauri::command]
 pub fn handle_lock_cell(
     timetable_manager: tauri::State<'_, TimeTableManager>,
@@ -169,7 +209,8 @@ pub fn handle_switch_lock(
     acosolver_manager: tauri::State<'_, ACOSolverManager>,
     id: usize,
 ) -> Result<TimeTable, String> {
-    println!("called handle_switch_lock");
+    println!("called handle_switch_lock,{}",id);
+    //このidはindexを指さない　
     let mut managed_timetable = timetable_manager.timetable_manager.lock().unwrap();
     let mut managed_solver = acosolver_manager.solver.lock().unwrap();
     if let Some(timetable) = managed_timetable.as_mut() {
