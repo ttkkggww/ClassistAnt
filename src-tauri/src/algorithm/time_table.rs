@@ -3,6 +3,7 @@ pub mod cell;
 use cell::ActiveCell;
 use cell::BlankCell;
 use cell::Cell;
+use tauri::async_runtime::block_on;
 use core::time;
 use std::error::Error;
 use std::sync::Mutex;
@@ -135,29 +136,40 @@ fn calc_color_from_cell(solver: &ACOSolver, active_cell: &ActiveCell) -> String 
     return get_pheromone_color(solver, class_id, room_id, period_id);
 }
 
+#[tauri::command]
 pub fn is_swappable(
     timetable_manager: tauri::State<'_, TimeTableManager>,
+    solver_manager: tauri::State<'_, ACOSolverManager>,
     over_id: usize,
     active_id: usize,
 ) -> Result<bool, String> {
-    //TODO:週をまたぐのも禁止するしょりを書く
     let managed_timetable = timetable_manager.timetable_manager.lock().unwrap();
-
+    let managed_solver = solver_manager.solver.lock().unwrap();
+    let parameter = managed_solver.as_ref().ok_or("No solver found")?.parameters.clone();
+    let periods_size = parameter.num_of_periods;
+    let mut over_remain = over_id % periods_size;
     let mut is_swappable = true;
     if let Some(timetable) = managed_timetable.as_ref() {
         if let Cell::ActiveCell(active_cell) = timetable.cells[active_id].clone() {
             for index in over_id..(over_id + active_cell.size.unwrap_or(1)) {
-                if let Cell::ActiveCell(_) = timetable.cells[index].clone() {
-                    is_swappable = false;
+                if let Cell::ActiveCell(active_cell) = timetable.cells[index].clone() {
+                    if active_cell.id != active_id {
+                        is_swappable = false;
+                    }
                 }
             }
+            over_remain += active_cell.size.unwrap_or(1);
         }
+    }
+    if over_remain > periods_size {
+        is_swappable = false;
     }
     return Ok(is_swappable);
 }
 
+//Assume all swap destinations are blankcells
 #[tauri::command]
-pub fn handle_lock_cell(
+pub fn handle_swap_cell(
     timetable_manager: tauri::State<'_, TimeTableManager>,
     over_id: usize,
     active_id: usize,
@@ -174,12 +186,14 @@ pub fn handle_lock_cell(
                         blank_cell.id = active_cell.id;
                         blank_cell.room = active_cell.room;
                         blank_cell.period = active_cell.period.clone();
+                        blank_cell.is_visible = true;
                     }
                     _ => (),
                 }
                 new_timetable.cells[over_id] = Cell::ActiveCell(active_cell.clone());
                 match &mut new_timetable.cells[over_id] {
                     Cell::ActiveCell(active_cell) => {
+                        active_cell.class_name = format!("{}:{}",over_id.to_string(),active_cell.class_name.clone());
                         active_cell.id = blank_cell.id;
                         active_cell.room = blank_cell.room;
                         active_cell.period = blank_cell.period;
@@ -198,6 +212,27 @@ pub fn handle_lock_cell(
         }
     } else {
         return Err("No timetable found".to_string());
+    }
+    let active_cell_size = match &new_timetable.cells[over_id] {
+        Cell::ActiveCell(active_cell) => active_cell.size.unwrap_or(1),
+        _ => 1,
+    };
+    for i in (active_id + 1)..(active_id + active_cell_size) {
+        match &mut new_timetable.cells[i] {
+            Cell::BlankCell(blank_cell) => {
+                blank_cell.is_visible = true;
+            }
+            _ => (),
+        }
+    }
+    for i in (over_id + 1)..(over_id + active_cell_size) {
+        println!("visible:{}:{}",i,active_cell_size);
+        match &mut new_timetable.cells[i] {
+            Cell::BlankCell(blank_cell) => {
+                blank_cell.is_visible = false;
+            }
+            _ => (),
+        }
     }
     *managed_timetable = Some(new_timetable.clone());
     return Ok(new_timetable);

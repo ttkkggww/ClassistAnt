@@ -124,8 +124,9 @@ fn handle_aco_run_once(
 use algorithm::aco::aco_solver::handle_one_hot_pheromone;
 use algorithm::aco::aco_solver::handle_read_cells;
 use table_editor::handle_get_table;
-use time_table::handle_lock_cell;
+use time_table::handle_swap_cell;
 use time_table::handle_switch_lock;
+use time_table::is_swappable;
 
 fn main() -> Result<(), Box<dyn Error>> {
     //let input = input::Input::new();
@@ -138,9 +139,10 @@ fn main() -> Result<(), Box<dyn Error>> {
             handle_aco_run_once,
             handle_one_hot_pheromone,
             handle_get_table,
-            handle_lock_cell,
+            handle_swap_cell,
             handle_read_cells,
-            handle_switch_lock
+            handle_switch_lock,
+            is_swappable
         ])
         .setup(|app| {
             let input_manager = InputManager {
