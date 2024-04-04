@@ -16,7 +16,7 @@ export function Droppable({ id,styles,room,period,grid_size ,overColor}: droppab
   room = room + 1;
   period = period + 1;
   const style = {
-    gridArea: `${room}/${period}/${room + 1}/${period+grid_size}`,
+    gridArea: `${period}/${room}/${period+grid_size}/${room + 1}`,
     backgroundColor: isOver ? overColor : "transparent",
   };
   return <div ref={setNodeRef} className={styles} style={style}></div>;

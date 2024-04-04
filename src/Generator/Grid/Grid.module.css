@@ -2,18 +2,15 @@
 
 .grid-container {
   display: grid;
-  grid-template-columns: repeat(25,minmax(0,1fr));
-  grid-template-rows: repeat(19,1fr);
+  grid-template-columns: repeat(19,minmax(100px,1fr));
+  grid-template-rows: repeat(25,1fr);
 }
 
 
 .grid-cell {
-  height: 25px;
   border: 1px solid #ccc;
   padding: 8px;
-  width: auto;
   text-align: center;
   overflow-y: scroll; /* テキストがはみ出た場合に隠す */
   overflow-x: scroll;
-  white-space: nowrap; /* テキストを折り返さずに1行で表示 */
 }

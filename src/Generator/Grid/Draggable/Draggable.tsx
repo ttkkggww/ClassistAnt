@@ -27,14 +27,14 @@ export function Draggable({ hex_color, text, id, styles,room,period,grid_size,se
         transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
         backgroundColor: hex_color,
         gridColumn: `span ${grid_size}`,
-        gridArea: `${room}/${period}/${room+1}/${period+grid_size}`,
-        zIndex: 1,
+        gridArea: `${period}/${room}/${period+grid_size}/${room+1}`,
+        zIndex: 3,
       }
     : {
         backgroundColor: hex_color,
         gridColumn: `span ${grid_size}`,
-        gridArea: `${room}/${period}/${room+1}/${period+grid_size}`,
-        zIndex: 1,
+        gridArea: `${period}/${room}/${period+grid_size}/${room+1}`,
+        zIndex: 2,
     };
 
   const handleDobuleClick = () => {
