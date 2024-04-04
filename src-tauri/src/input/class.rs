@@ -10,7 +10,7 @@ pub struct Class {
     pub teacher_indexes: Vec<usize>,
     pub room_candidates_indexes: Vec<usize>,
     pub students_group_indexes: Vec<usize>,
-    pub serial_size: usize
+    pub serial_size: usize,
 }
 
 impl Class {

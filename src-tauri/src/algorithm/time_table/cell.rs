@@ -35,6 +35,6 @@ pub struct BlankCell {
     pub id: usize,
     pub period: usize,
     pub room: usize,
-    pub is_visible:bool,
+    pub is_visible: bool,
     pub size: Option<usize>,
 }

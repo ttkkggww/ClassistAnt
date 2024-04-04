@@ -4,7 +4,6 @@
   display: grid;
   grid-template-columns: repeat(25,minmax(0,1fr));
   grid-template-rows: repeat(19,1fr);
-  grid-auto-flow: row;
 }
 
 

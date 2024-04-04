@@ -3,10 +3,10 @@ pub mod cell;
 use cell::ActiveCell;
 use cell::BlankCell;
 use cell::Cell;
-use tauri::async_runtime::block_on;
 use core::time;
 use std::error::Error;
 use std::sync::Mutex;
+use tauri::async_runtime::block_on;
 
 use crate::input::room;
 
@@ -44,7 +44,11 @@ pub fn convert_solver_to_timetable(solver: &ACOSolver) -> Result<TimeTable, Box<
                 period: period_id as usize,
                 room: room_id as usize,
                 class_index: class_id as usize,
-                class_name: format!("{}:{}",id.to_string(),(classes[class_id].get_name().clone())),
+                class_name: format!(
+                    "{}:{}",
+                    id.to_string(),
+                    (classes[class_id].get_name().clone())
+                ),
                 teachers: None,
                 students: None,
                 color: Some(calc_color_init(solver, class_id, room_id, period_id)),
@@ -55,22 +59,6 @@ pub fn convert_solver_to_timetable(solver: &ACOSolver) -> Result<TimeTable, Box<
                     .map(|_| true),
                 size: Some(classes[class_id].serial_size),
             });
-    }
-
-    for index in 0..cells.len(){
-        match cells[index].clone(){
-            Cell::ActiveCell(active_cell) => {
-                for j in (index+1)..(index+active_cell.size.unwrap_or(1)){
-                    match cells[j].as_mut(){
-                        Cell::BlankCell(blank_cell) => {
-                            blank_cell.is_visible = false;
-                        },
-                        _ => (),
-                    }
-                }
-            },
-            _ => (),
-        }
     }
 
     Ok(TimeTable { cells })
@@ -127,7 +115,6 @@ fn get_pheromone_color(
 
 fn calc_color_from_cell(solver: &ACOSolver, active_cell: &ActiveCell) -> String {
     if active_cell.is_locked.unwrap_or(false) {
-        println!("::{}", active_cell.is_locked.unwrap_or(false));
         return "#AAAAFF".to_string();
     }
     let class_id = active_cell.class_index;
@@ -145,7 +132,11 @@ pub fn is_swappable(
 ) -> Result<bool, String> {
     let managed_timetable = timetable_manager.timetable_manager.lock().unwrap();
     let managed_solver = solver_manager.solver.lock().unwrap();
-    let parameter = managed_solver.as_ref().ok_or("No solver found")?.parameters.clone();
+    let parameter = managed_solver
+        .as_ref()
+        .ok_or("No solver found")?
+        .parameters
+        .clone();
     let periods_size = parameter.num_of_periods;
     let mut over_remain = over_id % periods_size;
     let mut is_swappable = true;
@@ -193,7 +184,8 @@ pub fn handle_swap_cell(
                 new_timetable.cells[over_id] = Cell::ActiveCell(active_cell.clone());
                 match &mut new_timetable.cells[over_id] {
                     Cell::ActiveCell(active_cell) => {
-                        active_cell.class_name = format!("{}:{}",over_id.to_string(),active_cell.class_name.clone());
+                        active_cell.class_name =
+                            format!("{}:{}", over_id.to_string(), active_cell.class_name.clone());
                         active_cell.id = blank_cell.id;
                         active_cell.room = blank_cell.room;
                         active_cell.period = blank_cell.period;
@@ -217,23 +209,6 @@ pub fn handle_swap_cell(
         Cell::ActiveCell(active_cell) => active_cell.size.unwrap_or(1),
         _ => 1,
     };
-    for i in (active_id + 1)..(active_id + active_cell_size) {
-        match &mut new_timetable.cells[i] {
-            Cell::BlankCell(blank_cell) => {
-                blank_cell.is_visible = true;
-            }
-            _ => (),
-        }
-    }
-    for i in (over_id + 1)..(over_id + active_cell_size) {
-        println!("visible:{}:{}",i,active_cell_size);
-        match &mut new_timetable.cells[i] {
-            Cell::BlankCell(blank_cell) => {
-                blank_cell.is_visible = false;
-            }
-            _ => (),
-        }
-    }
     *managed_timetable = Some(new_timetable.clone());
     return Ok(new_timetable);
 }
@@ -244,8 +219,8 @@ pub fn handle_switch_lock(
     acosolver_manager: tauri::State<'_, ACOSolverManager>,
     id: usize,
 ) -> Result<TimeTable, String> {
-    println!("called handle_switch_lock,{}",id);
-    //このidはindexを指さない　
+    println!("called handle_switch_lock,{}", id);
+    //このidはindexを指さない
     let mut managed_timetable = timetable_manager.timetable_manager.lock().unwrap();
     let mut managed_solver = acosolver_manager.solver.lock().unwrap();
     if let Some(timetable) = managed_timetable.as_mut() {
@@ -253,11 +228,6 @@ pub fn handle_switch_lock(
             if let Cell::ActiveCell(active_cell) = timetable.cells[id].as_mut() {
                 active_cell.is_locked = Some(!active_cell.is_locked.unwrap_or(false));
                 active_cell.color = Some(calc_color_from_cell(solver, active_cell));
-                println!("{:?}", active_cell.is_locked.unwrap_or(false));
-                println!(
-                    "{:?}",
-                    active_cell.color.clone().unwrap_or("#FFFFFF".to_string())
-                );
             }
         }
         return Ok(timetable.clone());

@@ -40,7 +40,13 @@ impl Ant {
         };
     }
 
-    fn allocate_classes(&mut self, class_index: usize, room_index: usize, period_index: usize, graph: &Graph) {
+    fn allocate_classes(
+        &mut self,
+        class_index: usize,
+        room_index: usize,
+        period_index: usize,
+        graph: &Graph,
+    ) {
         let serial_size = graph.get_class(class_index).serial_size;
         self.corresponding_crp[class_index] = [room_index, period_index];
         self.visited_classes[class_index] = true;
@@ -48,7 +54,11 @@ impl Ant {
             self.visited_roomperiods[room_index][period_index + i] = true;
         }
         //get teacher indexes in classes,then add time;
-        for teacher_index in graph.get_class_ref(class_index).get_teacher_indexes().iter() {
+        for teacher_index in graph
+            .get_class_ref(class_index)
+            .get_teacher_indexes()
+            .iter()
+        {
             if let Some(times) = self.teachers_times.get_mut(*teacher_index as usize) {
                 for i in 0..serial_size {
                     if let Some(time) = times.get_mut(&(period_index + i)) {
@@ -60,7 +70,11 @@ impl Ant {
             }
         }
         //get student group indexes in classes,then add time;
-        for student_index in graph.get_class_ref(class_index).get_students_group_indexes().iter() {
+        for student_index in graph
+            .get_class_ref(class_index)
+            .get_students_group_indexes()
+            .iter()
+        {
             if let Some(times) = self.students_times.get_mut(*student_index as usize) {
                 for i in 0..serial_size {
                     if let Some(time) = times.get_mut(&(period_index + i)) {
@@ -80,7 +94,7 @@ impl Ant {
         //preallocate locked classes
         for v in shuffled_array.iter() {
             if let Some(to) = graph.get_classes_is_locked(*v) {
-                self.allocate_classes(*v, to.0, to.1,graph);
+                self.allocate_classes(*v, to.0, to.1, graph);
             }
         }
         //allocate with pheromone
@@ -96,7 +110,7 @@ impl Ant {
                 let random_p = rand::random::<f64>();
                 to = to_vertex[to_period.iter().position(|&x| x > random_p).unwrap()];
             }
-            self.allocate_classes(*v, to[0], to[1],graph);
+            self.allocate_classes(*v, to[0], to[1], graph);
         }
     }
 
@@ -159,10 +173,10 @@ impl Ant {
         length
     }
 
-    fn calc_allocatable_room_periods(&self, serial_size:usize, graph: &Graph) -> Vec<[usize; 2]> {
+    fn calc_allocatable_room_periods(&self, serial_size: usize, graph: &Graph) -> Vec<[usize; 2]> {
         let mut res = Vec::new();
         for room in 0..self.parameters.num_of_rooms as usize {
-            for period in 0..(self.parameters.num_of_periods-serial_size+1) as usize {
+            for period in 0..(self.parameters.num_of_periods - serial_size + 1) as usize {
                 let mut is_allocatable = true;
                 for i in 0..serial_size {
                     if self.visited_roomperiods[room][period + i] == true {
@@ -186,7 +200,7 @@ impl Ant {
         let beta = self.parameters.beta;
         let serial_size = graph.get_class(v).serial_size;
 
-        for [room,period] in self.calc_allocatable_room_periods(serial_size, graph){
+        for [room, period] in self.calc_allocatable_room_periods(serial_size, graph) {
             let pre_pheromone = graph.get_pheromone(v, room, period);
             let heuristics = self.parameters.q
                 / self.calc_edge_length(
