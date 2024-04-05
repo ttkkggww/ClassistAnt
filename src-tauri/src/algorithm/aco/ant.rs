@@ -123,7 +123,12 @@ impl Ant {
         for i in 0..self.corresponding_crp.len() {
             let [room, period] = self.corresponding_crp[i];
             let q = self.parameters.q;
-            graph.add_next_pheromone(i, room, period, q / (length_period[period]+length_room[room]));
+            graph.add_next_pheromone(
+                i,
+                room,
+                period,
+                q / (length_period[period] + length_room[room]),
+            );
         }
     }
 
@@ -152,12 +157,14 @@ impl Ant {
         length
     }
 
-    fn calc_all_path_length_par_room(&self,graph: &Graph) -> Vec<f64> {
+    fn calc_all_path_length_par_room(&self, graph: &Graph) -> Vec<f64> {
         let mut length = vec![1.0; self.parameters.num_of_rooms as usize];
         for class_id in 0..self.corresponding_crp.len() {
             let [room, period] = self.corresponding_crp[class_id];
             let serial_size = graph.get_class(class_id).serial_size;
-            if (period % self.parameters.num_of_day_lengths) + serial_size > self.parameters.num_of_day_lengths {
+            if (period % self.parameters.num_of_day_lengths) + serial_size
+                > self.parameters.num_of_day_lengths
+            {
                 length[room] += STRADDLE_DAYS_COEF;
             }
         }
@@ -170,7 +177,7 @@ impl Ant {
         let length_room = self.calc_all_path_length_par_room(graph);
         for class_id in 0..self.corresponding_crp.len() {
             let [room, period] = self.corresponding_crp[class_id];
-            length += length_period[period] + length_room[room]-2.0;
+            length += length_period[period] + length_room[room] - 2.0;
         }
         length
     }
@@ -281,7 +288,9 @@ impl Ant {
                 }
             }
         }
-        if (period % self.parameters.num_of_day_lengths) + class.serial_size > self.parameters.num_of_day_lengths {
+        if (period % self.parameters.num_of_day_lengths) + class.serial_size
+            > self.parameters.num_of_day_lengths
+        {
             edge_length += STRADDLE_DAYS_COEF;
         }
         edge_length

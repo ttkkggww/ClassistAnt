@@ -100,7 +100,10 @@ impl ACOSolver {
             } else {
                 self.super_ant = Some(best_ant.clone());
             }
-            println!("best path length: {}", best_ant.calc_all_path_length(self.colony.get_graph()));
+            println!(
+                "best path length: {}",
+                best_ant.calc_all_path_length(self.colony.get_graph())
+            );
         }
         if self.cnt_super_not_change > self.parameters.super_not_change {
             println!("reset pheromone!");
