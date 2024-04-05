@@ -1,13 +1,16 @@
 use super::aco_parameters::AcoParameters;
 use super::graph::{self, Graph};
 use super::violations::{self, Violations};
-use crate::input::class::Class;
+use crate::input::class::{self, Class};
+use crate::input::room;
 use rand::seq::SliceRandom;
 use std::collections::HashMap;
+use std::vec;
 
 static CAP_COEF: f64 = 2.0;
 static TEACHER_COEF: f64 = 1.0;
 static STUDENT_COEF: f64 = 1.0;
+static STRADDLE_DAYS_COEF: f64 = 1.0;
 
 #[derive(Clone)]
 pub struct Ant {
@@ -115,11 +118,12 @@ impl Ant {
     }
 
     pub fn update_next_pheromone(&mut self, graph: &mut Graph) {
-        let length_v = self.calc_all_path_length_par_period(graph);
+        let length_period = self.calc_all_path_length_par_period(graph);
+        let length_room = self.calc_all_path_length_par_room(graph);
         for i in 0..self.corresponding_crp.len() {
             let [room, period] = self.corresponding_crp[i];
             let q = self.parameters.q;
-            graph.add_next_pheromone(i, room, period, q / length_v[period]);
+            graph.add_next_pheromone(i, room, period, q / (length_period[period]+length_room[room]));
         }
     }
 
@@ -148,27 +152,25 @@ impl Ant {
         length
     }
 
+    fn calc_all_path_length_par_room(&self,graph: &Graph) -> Vec<f64> {
+        let mut length = vec![1.0; self.parameters.num_of_rooms as usize];
+        for class_id in 0..self.corresponding_crp.len() {
+            let [room, period] = self.corresponding_crp[class_id];
+            let serial_size = graph.get_class(class_id).serial_size;
+            if (period % self.parameters.num_of_day_lengths) + serial_size > self.parameters.num_of_day_lengths {
+                length[room] += STRADDLE_DAYS_COEF;
+            }
+        }
+        length
+    }
+
     pub fn calc_all_path_length(&self, graph: &Graph) -> f64 {
         let mut length = 1.0;
+        let length_period = self.calc_all_path_length_par_period(graph);
+        let length_room = self.calc_all_path_length_par_room(graph);
         for class_id in 0..self.corresponding_crp.len() {
-            let [room, _] = self.corresponding_crp[class_id];
-            if graph.get_room_ref(room).get_capacity()
-                < graph.get_class_ref(class_id).get_num_of_students()
-            {
-                length += CAP_COEF;
-            }
-        }
-        for mp in self.students_times.iter() {
-            for (_, v) in mp.iter() {
-                let ftime = (*v).len() as f64;
-                length += (ftime * (ftime - 1.0) / 2.0 as f64) * STUDENT_COEF;
-            }
-        }
-        for mp in self.teachers_times.iter() {
-            for (_, v) in mp.iter() {
-                let ftime = (*v).len() as f64;
-                length += (ftime * (ftime - 1.0) / 2.0 as f64) * TEACHER_COEF;
-            }
+            let [room, period] = self.corresponding_crp[class_id];
+            length += length_period[period] + length_room[room]-2.0;
         }
         length
     }
@@ -278,6 +280,9 @@ impl Ant {
                     edge_length += (ftime * (ftime - 1.0) / 2.0 as f64) * TEACHER_COEF;
                 }
             }
+        }
+        if (period % self.parameters.num_of_day_lengths) + class.serial_size > self.parameters.num_of_day_lengths {
+            edge_length += STRADDLE_DAYS_COEF;
         }
         edge_length
     }

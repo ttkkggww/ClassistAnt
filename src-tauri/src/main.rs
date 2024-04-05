@@ -26,6 +26,7 @@ fn handle_input(input: input::Input) -> Result<(), String> {
         num_of_classes: input.get_classes().len() as usize,
         num_of_rooms: input.get_rooms().len() as usize,
         num_of_periods: 5 * 5,
+        num_of_day_lengths: 5,
         num_of_teachers: input.get_teachers().len() as usize,
         num_of_students: input.get_student_groups().len() as usize,
         q: 1.0,
@@ -60,6 +61,7 @@ fn handle_adapt_input(
             num_of_classes: input.get_classes().len(),
             num_of_rooms: input.get_rooms().len(),
             num_of_periods: 5 * 5,
+            num_of_day_lengths: 5,
             num_of_teachers: input.get_teachers().len(),
             num_of_students: input.get_student_groups().len(),
             q: 10.0,
@@ -109,11 +111,10 @@ fn handle_aco_run_once(
     solver_manager: tauri::State<'_, ACOSolverManager>,
     timetable_manager: tauri::State<'_, time_table::TimeTableManager>,
 ) -> Result<time_table::TimeTable, String> {
-    println!("called handle_aco_run_once");
     let mut managed_solver = solver_manager.solver.lock().unwrap();
 
     if let Some(solver) = managed_solver.as_mut() {
-        solver.run_aco_times(1);
+        solver.run_aco_times(100);
         let res = time_table::convert_solver_to_timetable(solver).map_err(|e| e.to_string())?;
         time_table::save_timetable(timetable_manager, res.clone());
         return Ok(res);

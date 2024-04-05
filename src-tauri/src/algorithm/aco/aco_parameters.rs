@@ -4,6 +4,7 @@ pub struct AcoParameters {
     pub num_of_classes: usize,
     pub num_of_rooms: usize,
     pub num_of_periods: usize,
+    pub num_of_day_lengths: usize,
     pub num_of_teachers: usize,
     pub num_of_students: usize,
     pub q: f64,
