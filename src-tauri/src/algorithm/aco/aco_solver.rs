@@ -158,6 +158,35 @@ impl ACOSolver {
         return res;
     }
 
+    pub fn get_best_ant_same_teacher_violations_strictly(&self) -> Vec<Violations> {
+        if let Some(best_ant) = &self.best_ant {
+            return best_ant.get_same_teacher_violations_strictly(&self.input);
+        }
+        return Vec::new();
+    }
+
+    pub fn get_best_ant_same_group_violations_strictly(&self) -> Vec<Violations> {
+        if let Some(best_ant) = &self.best_ant {
+            return best_ant.get_same_students_group_violations_strictly(&self.input);
+        }
+        return Vec::new();
+    }
+
+    pub fn get_best_ant_strabble_days_violations(&self) -> Vec<Violations> {
+        if let Some(best_ant) = &self.best_ant {
+            return best_ant.get_strabble_days_violations(&self.input);
+        }
+        return Vec::new();
+    }
+    pub fn get_best_ant_total_violations_strictly(&self) -> Vec<Violations> {
+        let mut res = Vec::new();
+        res.append(&mut self.get_best_ant_same_group_violations());
+        res.append(&mut self.get_best_ant_same_teacher_violations_strictly());
+        res.append(&mut self.get_best_ant_capacity_violations());
+        res
+    }
+
+
     fn ceiling_max_pheromone(&self) -> f64 {
         return (self.parameters.num_of_ants as f64) * (self.parameters.q / self.parameters.rou);
     }
@@ -172,6 +201,7 @@ impl ACOSolver {
             max_pheromone,
         );
     }
+
 }
 
 pub struct ACOSolverManager {
