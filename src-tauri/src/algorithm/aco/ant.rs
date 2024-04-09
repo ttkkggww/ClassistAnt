@@ -178,10 +178,10 @@ impl Ant {
         let length_period = self.calc_all_path_length_par_period(graph);
         let length_room = self.calc_all_path_length_par_room(graph);
         for p in &length_period {
-            length += p-1.0;
+            length += p - 1.0;
         }
         for r in &length_room {
-            length += r-1.0;
+            length += r - 1.0;
         }
 
         length
@@ -365,7 +365,7 @@ impl Ant {
         res
     }
 
-    pub fn get_same_teacher_violations_strictly(&self,input:&Input) -> Vec<Violations> {
+    pub fn get_same_teacher_violations_strictly(&self, input: &Input) -> Vec<Violations> {
         let mut res = Vec::new();
         let period = self.parameters.num_of_periods;
         let room = self.parameters.num_of_rooms;
@@ -378,17 +378,18 @@ impl Ant {
             table.push(period_vec);
         }
         let classes = input.get_classes();
-        for (class_id,[room,period]) in self.corresponding_crp.iter().enumerate() {
+        for (class_id, [room, period]) in self.corresponding_crp.iter().enumerate() {
             let class_size = classes[class_id].serial_size;
             for i in 0..class_size {
                 //ここに教師IDを入れる
-                table[period+i][*room].extend(classes[class_id].teacher_indexes.clone());
+                table[period + i][*room].extend(classes[class_id].teacher_indexes.clone());
             }
         }
-        
-        let mut same_teacher:Vec<Vec<Vec<usize>>>= Vec::with_capacity(self.parameters.num_of_periods);
+
+        let mut same_teacher: Vec<Vec<Vec<usize>>> =
+            Vec::with_capacity(self.parameters.num_of_periods);
         for i in 0..self.parameters.num_of_periods {
-            same_teacher.push(vec![vec![];self.parameters.num_of_teachers]);
+            same_teacher.push(vec![vec![]; self.parameters.num_of_teachers]);
         }
         for room_id in 0..room {
             for period in 0..period {
@@ -410,7 +411,7 @@ impl Ant {
         res
     }
 
-    pub fn get_same_students_group_violations_strictly(&self,input:&Input) -> Vec<Violations> {
+    pub fn get_same_students_group_violations_strictly(&self, input: &Input) -> Vec<Violations> {
         let mut res = Vec::new();
         let period = self.parameters.num_of_periods;
         let room = self.parameters.num_of_rooms;
@@ -423,16 +424,17 @@ impl Ant {
             table.push(period_vec);
         }
         let classes: &Vec<Class> = input.get_classes();
-        for (class_id,[room,period]) in self.corresponding_crp.iter().enumerate() {
+        for (class_id, [room, period]) in self.corresponding_crp.iter().enumerate() {
             let class_size = classes[class_id].serial_size;
             for i in 0..class_size {
                 //ここに学生IDをいれる
-                table[period+i][*room].extend(classes[class_id].students_group_indexes.clone());
+                table[period + i][*room].extend(classes[class_id].students_group_indexes.clone());
             }
         }
-        let mut same_group:Vec<Vec<Vec<usize>>>= Vec::with_capacity(self.parameters.num_of_periods);
+        let mut same_group: Vec<Vec<Vec<usize>>> =
+            Vec::with_capacity(self.parameters.num_of_periods);
         for i in 0..self.parameters.num_of_periods {
-            same_group.push(vec![vec![];self.parameters.num_of_students]);
+            same_group.push(vec![vec![]; self.parameters.num_of_students]);
         }
         for room_id in 0..room {
             for period in 0..period {
@@ -441,8 +443,8 @@ impl Ant {
                 }
             }
         }
-        for (i,vv) in same_group.iter().enumerate() {
-            for v in  vv {
+        for (i, vv) in same_group.iter().enumerate() {
+            for v in vv {
                 if v.len() > 1 {
                     let mut v = v.clone();
                     v.sort();
@@ -454,17 +456,17 @@ impl Ant {
         res
     }
 
-    pub fn get_strabble_days_violations(&self,input:&Input) -> Vec<Violations>{
+    pub fn get_strabble_days_violations(&self, input: &Input) -> Vec<Violations> {
         let mut res = Vec::new();
         let period = self.parameters.num_of_periods;
-        for (class_id,[room_id,_]) in self.corresponding_crp.iter().enumerate() {
+        for (class_id, [room_id, _]) in self.corresponding_crp.iter().enumerate() {
             let size = input.get_classes()[class_id].serial_size;
-            let mut period = period%self.parameters.num_of_day_lengths;
+            let mut period = period % self.parameters.num_of_day_lengths;
             period += size;
             if period > self.parameters.num_of_day_lengths {
                 let mut v = Vec::new();
                 v.push(room_id.clone());
-                let violations = Violations::new(period,v);
+                let violations = Violations::new(period, v);
                 res.push(violations);
             }
         }

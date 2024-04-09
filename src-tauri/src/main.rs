@@ -117,10 +117,22 @@ fn handle_aco_run_once(
         solver.run_aco_times(100);
         let res = time_table::convert_solver_to_timetable(solver).map_err(|e| e.to_string())?;
         time_table::save_timetable(timetable_manager, res.clone());
-        println!("violations_strict_student{:?}",solver.get_best_ant_same_group_violations_strictly());
-        println!("violations_strict_teacher{:?}",solver.get_best_ant_same_teacher_violations_strictly());
-        println!("violations_capacity{:?}",solver.get_best_ant_capacity_violations());
-        println!("violations_strabble_days{:?}",solver.get_best_ant_strabble_days_violations());
+        println!(
+            "violations_strict_student{:?}",
+            solver.get_best_ant_same_group_violations_strictly()
+        );
+        println!(
+            "violations_strict_teacher{:?}",
+            solver.get_best_ant_same_teacher_violations_strictly()
+        );
+        println!(
+            "violations_capacity{:?}",
+            solver.get_best_ant_capacity_violations()
+        );
+        println!(
+            "violations_strabble_days{:?}",
+            solver.get_best_ant_strabble_days_violations()
+        );
         return Ok(res);
     }
     return Err("No ACOSolver".to_string());

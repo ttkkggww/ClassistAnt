@@ -186,7 +186,6 @@ impl ACOSolver {
         res
     }
 
-
     fn ceiling_max_pheromone(&self) -> f64 {
         return (self.parameters.num_of_ants as f64) * (self.parameters.q / self.parameters.rou);
     }
@@ -201,7 +200,6 @@ impl ACOSolver {
             max_pheromone,
         );
     }
-
 }
 
 pub struct ACOSolverManager {
