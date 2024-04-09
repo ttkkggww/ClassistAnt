@@ -83,6 +83,10 @@ impl Classes {
             header: first_record[5].to_string(),
             accessor: "num_of_students".to_string(),
         });
+        columns.push(Column {
+            header: first_record[6].to_string(),
+            accessor: "serial_size".to_string(),
+        });
         for result in rdr.records() {
             let record = result?;
             let id = record[0].to_string();
@@ -91,6 +95,7 @@ impl Classes {
             let candidate_rooms = record[3].to_string();
             let student_groups = record[4].to_string();
             let num_of_students = record[5].to_string();
+            let serial_size = record[6].to_string();
             classes.push(Class {
                 id,
                 name,
@@ -98,6 +103,7 @@ impl Classes {
                 candidate_rooms,
                 student_groups,
                 num_of_students,
+                serial_size,
             });
         }
         Ok(Classes {

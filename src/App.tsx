@@ -19,20 +19,21 @@ function App() {
     <div className={styles.app}>
       <Tabs>
         <TabList>
+          <Tab>時間割生成</Tab>
           {tableNames.map((name,index) => (
             <Tab key={index}>{name}</Tab>
           ))}
-          <Tab>時間割生成</Tab>
         </TabList>
+
+        <TabPanel>
+          <Generator tableNames={tableNames}></Generator>
+        </TabPanel>
         {tableNames.map((name, i) => (
           <TabPanel key={name}>
             {/* 各タブに CsvTable コンポーネントを配置 */}
             <TableEditor key={i} tableName={name} />
           </TabPanel>
         ))}
-        <TabPanel>
-          <Generator tableNames={tableNames}></Generator>
-        </TabPanel>
       </Tabs>
     </div>
   );

@@ -14,7 +14,7 @@ pub struct ACOSolver {
     pub colony: Colony,
     pub best_ant: Option<Ant>,
     pub super_ant: Option<Ant>,
-    pub cnt_super_not_change: u64,
+    pub cnt_super_not_change: usize,
     pub input: Input,
 }
 
@@ -66,7 +66,7 @@ impl ACOSolver {
         }
     }
 
-    pub fn run_aco_times(&mut self, times: u64) {
+    pub fn run_aco_times(&mut self, times: usize) {
         for _ in 0..times {
             self.update_aco();
         }
@@ -100,6 +100,10 @@ impl ACOSolver {
             } else {
                 self.super_ant = Some(best_ant.clone());
             }
+            println!(
+                "best path length: {}",
+                best_ant.calc_all_path_length(self.colony.get_graph())
+            );
         }
         if self.cnt_super_not_change > self.parameters.super_not_change {
             println!("reset pheromone!");
@@ -152,6 +156,34 @@ impl ACOSolver {
         res.append(&mut self.get_best_ant_same_teacher_violations());
         res.append(&mut self.get_best_ant_capacity_violations());
         return res;
+    }
+
+    pub fn get_best_ant_same_teacher_violations_strictly(&self) -> Vec<Violations> {
+        if let Some(best_ant) = &self.best_ant {
+            return best_ant.get_same_teacher_violations_strictly(&self.input);
+        }
+        return Vec::new();
+    }
+
+    pub fn get_best_ant_same_group_violations_strictly(&self) -> Vec<Violations> {
+        if let Some(best_ant) = &self.best_ant {
+            return best_ant.get_same_students_group_violations_strictly(&self.input);
+        }
+        return Vec::new();
+    }
+
+    pub fn get_best_ant_strabble_days_violations(&self) -> Vec<Violations> {
+        if let Some(best_ant) = &self.best_ant {
+            return best_ant.get_strabble_days_violations(&self.input);
+        }
+        return Vec::new();
+    }
+    pub fn get_best_ant_total_violations_strictly(&self) -> Vec<Violations> {
+        let mut res = Vec::new();
+        res.append(&mut self.get_best_ant_same_group_violations());
+        res.append(&mut self.get_best_ant_same_teacher_violations_strictly());
+        res.append(&mut self.get_best_ant_capacity_violations());
+        res
     }
 
     fn ceiling_max_pheromone(&self) -> f64 {

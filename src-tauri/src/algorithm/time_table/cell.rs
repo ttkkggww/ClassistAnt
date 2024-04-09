@@ -26,13 +26,15 @@ pub struct ActiveCell {
     pub students: Option<Vec<String>>,
     pub color: Option<String>,
     pub is_locked: Option<bool>,
-    pub size: Option<u64>,
+    pub size: Option<usize>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct BlankCell {
     pub id: usize,
     pub period: usize,
     pub room: usize,
-    pub size: Option<u64>,
+    pub is_visible: bool,
+    pub size: Option<usize>,
 }

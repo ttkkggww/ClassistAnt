@@ -8,20 +8,34 @@ interface DraggableProps {
   id: number;
   styles: string;
   classId: number;
+  room: number;
+  period: number;
+  grid_size: number;
   setTimeTable: (
     timeTable: TimeTable | ((prevTimeTable: TimeTable) => TimeTable),
   ) => void;
 }
 
-export function Draggable({ hex_color, text, id, styles,classId,setTimeTable }: DraggableProps) {
+export function Draggable({ hex_color, text, id, styles,room,period,grid_size,setTimeTable }: DraggableProps) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: id.toString(),
   });
+  room = room + 1;
+  period = period + 1;
   const style = transform
     ? {
         transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+        backgroundColor: hex_color,
+        gridColumn: `span ${grid_size}`,
+        gridArea: `${period}/${room}/${period+grid_size}/${room+1}`,
+        zIndex: 3,
       }
-    : undefined;
+    : {
+        backgroundColor: hex_color,
+        gridColumn: `span ${grid_size}`,
+        gridArea: `${period}/${room}/${period+grid_size}/${room+1}`,
+        zIndex: 2,
+    };
 
   const handleDobuleClick = () => {
     invoke<TimeTable>("handle_switch_lock", {id:id})
@@ -33,14 +47,11 @@ export function Draggable({ hex_color, text, id, styles,classId,setTimeTable }: 
   }
   return (
     <div ref={setNodeRef} 
-      style={style} 
       {...listeners} 
       {...attributes}
       onDoubleClick={handleDobuleClick}
-    >
-      <div style={{ backgroundColor: hex_color }} className={styles}>
-        {text}
-      </div>
+      style={style} className={styles}>
+        {text} 
     </div>
   );
 }
