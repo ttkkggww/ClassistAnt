@@ -114,7 +114,7 @@ fn handle_aco_run_once(
     let mut managed_solver = solver_manager.solver.lock().unwrap();
 
     if let Some(solver) = managed_solver.as_mut() {
-        solver.run_aco_times(100);
+        solver.run_aco_times(10);
         let res = time_table::convert_solver_to_timetable(solver).map_err(|e| e.to_string())?;
         time_table::save_timetable(timetable_manager, res.clone());
         println!(

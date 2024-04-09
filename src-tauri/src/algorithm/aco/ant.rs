@@ -8,8 +8,8 @@ use std::collections::HashMap;
 use std::vec;
 
 static CAP_COEF: f64 = 2.0;
-static TEACHER_COEF: f64 = 1.0;
-static STUDENT_COEF: f64 = 1.0;
+static TEACHER_COEF: f64 = 3.0;
+static STUDENT_COEF: f64 = 3.0;
 static STRADDLE_DAYS_COEF: f64 = 1.0;
 
 #[derive(Clone)]

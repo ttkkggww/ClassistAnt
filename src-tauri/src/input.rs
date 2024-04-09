@@ -135,7 +135,7 @@ impl Input {
                 if let Some(add) = student_groups.iter().position(|x| x.name == i) {
                     students_group_indexes.push(add as usize);
                 } else {
-                    panic!("student_group not found");
+                    panic!("student_group not found: {}", i);
                 }
             }
             let num_of_students = record[5].parse::<usize>().unwrap();
