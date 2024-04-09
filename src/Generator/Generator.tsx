@@ -10,6 +10,21 @@ interface GeneratorProps {
 
 const Generator: React.FC<GeneratorProps> = ({ tableNames }) => {
   let [timeTable, setTimeTable] = useState({ cells: [] } as TimeTable);
+  let [rooms,SetRooms] = useState([] as string[]);
+  let [periods,SetPeriods] = useState([] as string[]);
+
+  invoke<string[]>("handle_get_rooms").then((res) => {
+    SetRooms(res);
+  }).catch((err) => {
+    SetRooms([err]);
+  });
+
+  invoke<string[]>('handle_get_periods').then((res) => {
+    SetPeriods(res);
+  }).catch((err) => {
+    SetPeriods([err]);
+  });
+
   const sendClassData = () => {
     invoke("handle_set_input");
   };
@@ -34,7 +49,7 @@ const Generator: React.FC<GeneratorProps> = ({ tableNames }) => {
       <button onClick={sendClassData}>convert input</button>
       <button onClick={generate}>set input</button>
       <button onClick={run_once}>next generation</button>
-      <Grid timeTable={timeTable} setTimeTable={setTimeTable} />
+      <Grid timeTable={timeTable} setTimeTable={setTimeTable} rooms={rooms} periods={periods}/>
     </div>
   );
 };

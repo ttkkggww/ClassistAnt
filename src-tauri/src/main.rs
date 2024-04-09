@@ -1,10 +1,7 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use algorithm::aco::violations::Violations;
-use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
-use std::time;
 use tauri::Manager;
 mod algorithm;
 mod input;
@@ -106,6 +103,8 @@ use table_editor::handle_get_table;
 use time_table::handle_swap_cell;
 use time_table::handle_switch_lock;
 use time_table::is_swappable;
+use algorithm::aco::aco_parameters::handle_get_periods;
+use input::handle_get_rooms;
 
 fn main() -> Result<(), Box<dyn Error>> {
     //let input = input::Input::new();
@@ -119,7 +118,9 @@ fn main() -> Result<(), Box<dyn Error>> {
             handle_swap_cell,
             handle_read_cells,
             handle_switch_lock,
-            is_swappable
+            is_swappable,
+            handle_get_periods,
+            handle_get_rooms
         ])
         .setup(|app| {
             let input_manager = InputManager {

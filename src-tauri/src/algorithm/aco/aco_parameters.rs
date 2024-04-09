@@ -27,12 +27,12 @@ pub struct AcoParametersManager {
 
 static days_of_week : [&str;7]= ["月", "火", "水", "木", "金","土","日"];
 #[tauri::command]
-pub fn get_periods(parameters_manager: tauri::State<'_, AcoParametersManager>) -> Result<Vec<String>,String> {
+pub fn handle_get_periods(parameters_manager: tauri::State<'_, AcoParametersManager>) -> Result<Vec<String>,String> {
     let parameters = parameters_manager.parameters.lock().unwrap();
     let mut res = Vec::new();
     if let Some(parameters) = &*parameters {
         for i in 0..parameters.num_of_periods {
-            res.push(format!("{}曜日 {}限",days_of_week[(i/parameters.num_of_day_lengths)%days_of_week.len()],i%parameters.num_of_day_lengths));
+            res.push(format!("{}曜日 {}限",days_of_week[(i/parameters.num_of_day_lengths)%days_of_week.len()],i%parameters.num_of_day_lengths+1));
         }
         return Ok(res);
     }
