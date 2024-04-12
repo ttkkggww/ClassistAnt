@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use std::error::Error;
-
+use std::sync::Mutex;
 use self::{student_group::StudentGroup, teacher::Teacher};
 
 pub mod class;
@@ -166,4 +166,26 @@ impl Input {
     pub fn get_teachers(&self) -> &Vec<teacher::Teacher> {
         &self.teachers
     }
+}
+
+pub struct InputManager {
+    pub input:Mutex<Option<Input>>,
+}
+
+#[tauri::command]
+pub fn handle_set_input(input_manager: tauri::State<'_, InputManager>) -> Result<(), String> {
+    println!("called handle_set_input");
+    let input = Input::new();
+    let mut managed_input = input_manager.input.lock().unwrap();
+    *managed_input = Some(input);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn handle_get_rooms(input_manager: tauri::State<'_, InputManager>) -> Result<Vec<String>, String> {
+    let input = input_manager.input.lock().unwrap();
+    if let Some(input) = input.as_ref() {
+        return Ok(input.get_rooms().iter().map(|x| x.name.clone()).collect());
+    }
+    return Err("no input".to_string());
 }

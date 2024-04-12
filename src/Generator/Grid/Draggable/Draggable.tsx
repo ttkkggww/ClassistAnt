@@ -20,8 +20,8 @@ export function Draggable({ hex_color, text, id, styles,room,period,grid_size,se
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: id.toString(),
   });
-  room = room + 1;
-  period = period + 1;
+  room = room + 2;
+  period = period + 2;
   const style = transform
     ? {
         transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,

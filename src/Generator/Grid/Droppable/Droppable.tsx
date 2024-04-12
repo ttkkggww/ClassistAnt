@@ -13,8 +13,8 @@ export function Droppable({ id,styles,room,period,grid_size ,overColor}: droppab
   const { isOver, setNodeRef } = useDroppable({
     id: id.toString(),
   });
-  room = room + 1;
-  period = period + 1;
+  room = room + 2;
+  period = period + 2;
   const style = {
     gridArea: `${period}/${room}/${period+grid_size}/${room + 1}`,
     backgroundColor: isOver ? overColor : "transparent",

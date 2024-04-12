@@ -3,6 +3,8 @@ import {invoke} from "@tauri-apps/api/tauri";
 import styles from "./Grid.module.css";
 import { Droppable } from "./Droppable/Droppable";
 import { Draggable } from "./Draggable/Draggable";
+import { RoomIndex } from "./RoomIndex/RoomIndex";
+import { Period } from "./Period/Period";
 import { DndContext, MouseSensor, PointerSensor, useSensors } from "@dnd-kit/core";
 import { useSensor } from "@dnd-kit/core";
 let startX:number,startY: number;
@@ -51,13 +53,15 @@ interface GridProps {
   setTimeTable: (
     timeTable: TimeTable | ((prevTimeTable: TimeTable) => TimeTable),
   ) => void;
+  rooms: string[];
+  periods: string[];
 }
 
 const distance = (x1: number, y1: number, x2: number, y2: number) => {
   return Math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2);
 }
 
-const GridComponent: React.FC<GridProps> = ({ timeTable, setTimeTable }) => {
+const GridComponent: React.FC<GridProps> = ({ timeTable, setTimeTable ,rooms,periods}) => {
   const { cells } = timeTable;
 
   const sensor = useSensor(PointerSensor, {
@@ -65,9 +69,7 @@ const GridComponent: React.FC<GridProps> = ({ timeTable, setTimeTable }) => {
       distance: 5,
       },
     });
-
-    const sensors = useSensors(sensor);
-
+  const sensors = useSensors(sensor);
   const handleDragEnd = (event: any) => {
     const { over, active } = event;
     if (over == null) {
@@ -116,8 +118,8 @@ const GridComponent: React.FC<GridProps> = ({ timeTable, setTimeTable }) => {
 
   return (
     <div style={{ width: "100%" }}>
+      <div className={styles["grid-container"]} style={{}}>
       <DndContext onDragEnd={handleDragEnd} onDragOver={handleDragOver} sensors={sensors}>
-        <div className={styles["grid-container"]} style={{}}>
           {cells.map((cell, index) => {
             if (isActiveCell(cell)) {
               let cellData = cell.activeCell;
@@ -147,9 +149,14 @@ const GridComponent: React.FC<GridProps> = ({ timeTable, setTimeTable }) => {
 
             }
           })}
-        </div>
       </DndContext>
-      <div></div>
+      {rooms.map((room,index)=>{
+        return <RoomIndex key={index} id={index} name={room} styles={styles["grid-cell"]}/>
+      })}
+      {periods.map((period,index)=>{
+        return <Period key={index} id={index} name={period} styles={styles["grid-cell"]}/>
+      })}
+      </div>
     </div>
   );
 };
