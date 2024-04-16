@@ -28,15 +28,16 @@ impl ACOSolver {
         }
     }
 
-    pub fn get_class_id_time_table(&self) -> Vec<Vec<i64>> {
+    pub fn get_class_index_time_table(&self) -> Vec<Vec<usize>> {
         let mut res = vec![
-            vec![-1; self.parameters.num_of_periods as usize];
+            vec![0; self.parameters.num_of_periods as usize];
             self.parameters.num_of_rooms as usize
         ];
         if let Some(ant) = &self.best_ant {
-            for (class_id, &[room_id, period_id]) in ant.get_corresponding_crp().iter().enumerate()
-            {
-                res[room_id as usize][period_id as usize] = class_id as i64;
+            for (class_id, &[room_id, period_id]) in ant.get_corresponding_crp().iter().enumerate() {
+                for i in 0..self.input.get_classes()[class_id].serial_size {
+                    res[room_id as usize][period_id as usize + i as usize] = class_id;
+                }
             }
         }
         res

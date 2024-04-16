@@ -3,10 +3,15 @@ pub mod cell;
 use cell::ActiveCell;
 use cell::BlankCell;
 use cell::Cell;
+use rand::seq::index;
+use core::str;
 use std::error::Error;
 use std::sync::Mutex;
+use crate::input::class;
+
 use super::aco::aco_solver::ACOSolver;
 use super::aco::aco_solver::ACOSolverManager;
+use super::aco::violations;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -30,8 +35,60 @@ pub fn convert_solver_to_timetable(solver: &ACOSolver) -> Result<TimeTable, Box<
         }
     }
     let classes = solver.input.get_classes().clone();
+    let mut cells_violations = Vec::new();
+    {
+        for i in 0..(solver.parameters.num_of_classes) {
+            cells_violations.push(
+                violations::CellsViolation {
+                    is_violated: false,
+                    same_student_same_time: Vec::new(),
+                    same_teacher_same_time: Vec::new(),
+                    capacity_over: Vec::new(),
+                    strabble_days: Vec::new(),
+                }
+            );
+        }
+        let same_tercher_same_time = solver.get_best_ant_same_teacher_violations_strictly();
+        let same_student_same_time = solver.get_best_ant_same_group_violations_strictly();
+        let capacity_over = solver.get_best_ant_capacity_violations();
+        let strabble_days = solver.get_best_ant_strabble_days_violations();
+        let class_index_talbe = solver.get_class_index_time_table();
+        for violation in same_tercher_same_time {
+            for room in violation.clone().rooms {
+                let period = violation.period;
+                let index = class_index_talbe[room][period];
+                cells_violations[index].is_violated = true;
+                cells_violations[index].same_teacher_same_time.push(violation.clone());
+            }
+            
+        }
+        for violation in same_student_same_time {
+            for room in violation.clone().rooms {
+                let period = violation.period;
+                let index   = class_index_talbe[room][period];
+                cells_violations[index].is_violated = true;
+                cells_violations[index].same_student_same_time.push(violation.clone());
+            }
+        }
+        for violation in capacity_over {
+            for room in violation.clone().rooms {
+                let period = violation.period;
+                cells_violations[room].is_violated = true;
+                cells_violations[room].capacity_over.push(violation.clone());
+            }
+        }
+        for strabble_day in strabble_days {
+            for room in strabble_day.clone().rooms {
+                let period = strabble_day.period;
+                let index = class_index_talbe[room][period];
+                cells_violations[index].is_violated = true;
+                cells_violations[index].strabble_days.push(strabble_day.clone());
+            }
+        }
+    }
     for (class_id, &[room_id, period_id]) in best_ant.get_corresponding_crp().iter().enumerate() {
         let id = room_id * (solver.parameters.num_of_periods as usize) + period_id;
+        let class = classes[class_id].clone();
         cells[room_id as usize * solver.parameters.num_of_periods as usize + period_id as usize] =
             Cell::ActiveCell(ActiveCell {
                 id: id as usize,
@@ -39,9 +96,10 @@ pub fn convert_solver_to_timetable(solver: &ACOSolver) -> Result<TimeTable, Box<
                 room: room_id as usize,
                 class_index: class_id as usize,
                 class_name: format!(
-                    "{}:{}",
+                    "{}:{}:{:?}",
                     id.to_string(),
-                    (classes[class_id].get_name().clone())
+                    (classes[class_id].get_name().clone()),
+                    class.teacher_indexes
                 ),
                 teachers: None,
                 students: None,
@@ -52,6 +110,7 @@ pub fn convert_solver_to_timetable(solver: &ACOSolver) -> Result<TimeTable, Box<
                     .get_classes_is_locked(class_id)
                     .map(|_| true),
                 size: Some(classes[class_id].serial_size),
+                violations: Some(cells_violations[class_id].clone()),
             });
     }
 
