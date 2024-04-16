@@ -131,6 +131,7 @@ const GridComponent: React.FC<GridProps> = ({ timeTable, setTimeTable ,rooms,per
     });
   }
   
+  console.log('a');
 
   return (
     <div style={{ width: "100%" }}>

@@ -9,7 +9,7 @@ export function RoomIndex({id,name,styles}:roomIndexProps) {
     const style = {
         gridArea: `1/${id}/2/${id+1}`,
         backgroundColor: 'white',
-        border: '2px solid black',
+        border: '1px solid black',
         heignt:'100%',
         padding: '0',
     }
