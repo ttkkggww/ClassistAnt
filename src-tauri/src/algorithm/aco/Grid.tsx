@@ -8,19 +8,6 @@ import { Period } from "./Period/Period";
 import { DndContext, MouseSensor, PointerSensor, useSensors } from "@dnd-kit/core";
 import { useSensor } from "@dnd-kit/core";
 let startX:number,startY: number;
-
-interface Violations {
-  period: number;
-  rooms: number[];
-}
-
-interface cellsViolations {
-  is_violated: boolean;
-  sameStudentSameTime: Violations[];
-  sameTeacherSameTime: Violations[];
-  capacityOver: Violations[];
-  strabbleDays : Violations[];
-}
 class ActiveCell {
   id: number;
   className: string;
@@ -37,7 +24,6 @@ class ActiveCell {
   color?: string;
   isLocked?: boolean;
   size?: number;
-  violations?: cellsViolations;
 }
 
 class BlankCell {
@@ -61,6 +47,11 @@ function isActiveCell(cell: Cell): cell is { activeCell: ActiveCell } {
 type Cell = { activeCell: ActiveCell } | { blankCell: BlankCell };
 export interface TimeTable {
   cells: Array<Cell>;
+}
+
+interface Violations {
+  period: number;
+  rooms: number[];
 }
 
 
@@ -151,7 +142,6 @@ const GridComponent: React.FC<GridProps> = ({ timeTable, setTimeTable ,rooms,per
                   period={cellData.period}
                   grid_size={cellData.size ?? 1}
                   setTimeTable={setTimeTable}
-                  isViolated={cellData.violations?.is_violated ?? false}
                 />
               );
             }else {

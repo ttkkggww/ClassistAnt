@@ -14,9 +14,10 @@ interface DraggableProps {
   setTimeTable: (
     timeTable: TimeTable | ((prevTimeTable: TimeTable) => TimeTable),
   ) => void;
+  isViolated: boolean;
 }
 
-export function Draggable({ hex_color, text, id, styles,room,period,grid_size,setTimeTable }: DraggableProps) {
+export function Draggable({ hex_color, text, id, styles,room,period,grid_size,setTimeTable ,isViolated}: DraggableProps) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: id.toString(),
   });
@@ -29,12 +30,14 @@ export function Draggable({ hex_color, text, id, styles,room,period,grid_size,se
         gridColumn: `span ${grid_size}`,
         gridArea: `${period}/${room}/${period+grid_size}/${room+1}`,
         zIndex: 3,
+        border : isViolated ? '2px solid blue' : '',
       }
     : {
         backgroundColor: hex_color,
         gridColumn: `span ${grid_size}`,
         gridArea: `${period}/${room}/${period+grid_size}/${room+1}`,
         zIndex: 2,
+        border : isViolated ? '2px solid blue' : '',
     };
 
   const handleDobuleClick = () => {

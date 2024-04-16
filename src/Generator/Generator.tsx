@@ -13,6 +13,7 @@ const Generator: React.FC<GeneratorProps> = ({ tableNames }) => {
   let [rooms,SetRooms] = useState([] as string[]);
   let [periods,SetPeriods] = useState([] as string[]);
 
+  /*
   invoke<string[]>("handle_get_rooms").then((res) => {
     SetRooms(res);
   }).catch((err) => {
@@ -25,6 +26,7 @@ const Generator: React.FC<GeneratorProps> = ({ tableNames }) => {
     SetPeriods([err]);
   });
 
+  */
   const sendClassData = () => {
     invoke("handle_set_input");
   };
