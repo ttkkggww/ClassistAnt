@@ -6,6 +6,7 @@ use cell::Cell;
 use rand::seq::index;
 use core::str;
 use std::error::Error;
+use std::fmt::format;
 use std::sync::Mutex;
 use crate::input::class;
 
@@ -36,6 +37,7 @@ pub fn convert_solver_to_timetable(solver: &ACOSolver) -> Result<TimeTable, Box<
     }
     let classes = solver.input.get_classes().clone();
     let mut cells_violations = Vec::new();
+    let mut tool_tip_message = Vec::new();
     {
         for i in 0..(solver.parameters.num_of_classes) {
             cells_violations.push(
@@ -47,6 +49,7 @@ pub fn convert_solver_to_timetable(solver: &ACOSolver) -> Result<TimeTable, Box<
                     strabble_days: Vec::new(),
                 }
             );
+            tool_tip_message.push("".to_string());
         }
         let same_tercher_same_time = solver.get_best_ant_same_teacher_violations_strictly();
         let same_student_same_time = solver.get_best_ant_same_group_violations_strictly();
@@ -59,6 +62,11 @@ pub fn convert_solver_to_timetable(solver: &ACOSolver) -> Result<TimeTable, Box<
                 let index = class_index_talbe[room][period];
                 cells_violations[index].is_violated = true;
                 cells_violations[index].same_teacher_same_time.push(violation.clone());
+                let room_names: Vec<_> = violation.rooms.clone()
+                    .iter()
+                    .map(|room| solver.input.get_rooms()[*room].name.clone())
+                    .collect();
+                tool_tip_message[index] =  format!("{}\n同じ教師が同じ時間に複数のクラスを持っています。{:?}",tool_tip_message[index],room_names);
             }
             
         }
@@ -68,6 +76,11 @@ pub fn convert_solver_to_timetable(solver: &ACOSolver) -> Result<TimeTable, Box<
                 let index   = class_index_talbe[room][period];
                 cells_violations[index].is_violated = true;
                 cells_violations[index].same_student_same_time.push(violation.clone());
+                let room_names: Vec<_> = violation.rooms.clone()
+                    .iter()
+                    .map(|room| solver.input.get_rooms()[*room].name.clone())
+                    .collect();
+                tool_tip_message[index] = format!("{}\n同じ生徒が同じ時間に複数のクラスを持っています。{:?}",tool_tip_message[index],room_names);
             }
         }
         for violation in capacity_over {
@@ -75,6 +88,7 @@ pub fn convert_solver_to_timetable(solver: &ACOSolver) -> Result<TimeTable, Box<
                 let period = violation.period;
                 cells_violations[room].is_violated = true;
                 cells_violations[room].capacity_over.push(violation.clone());
+                tool_tip_message[room] = format!("{}\n教室のキャパシティを超えています。",tool_tip_message[room]);
             }
         }
         for strabble_day in strabble_days {
@@ -83,12 +97,14 @@ pub fn convert_solver_to_timetable(solver: &ACOSolver) -> Result<TimeTable, Box<
                 let index = class_index_talbe[room][period];
                 cells_violations[index].is_violated = true;
                 cells_violations[index].strabble_days.push(strabble_day.clone());
+                tool_tip_message[index] = format!("{}\n教室が日を跨いでいます。",tool_tip_message[index]);
             }
         }
     }
     for (class_id, &[room_id, period_id]) in best_ant.get_corresponding_crp().iter().enumerate() {
         let id = room_id * (solver.parameters.num_of_periods as usize) + period_id;
         let class = classes[class_id].clone();
+        let teacher_names: Vec<_>= class.teacher_indexes.iter().map(|x| solver.input.get_teachers()[*x].name.clone()).collect();
         cells[room_id as usize * solver.parameters.num_of_periods as usize + period_id as usize] =
             Cell::ActiveCell(ActiveCell {
                 id: id as usize,
@@ -99,7 +115,7 @@ pub fn convert_solver_to_timetable(solver: &ACOSolver) -> Result<TimeTable, Box<
                     "{}:{}:{:?}",
                     id.to_string(),
                     (classes[class_id].get_name().clone()),
-                    class.teacher_indexes
+                    teacher_names
                 ),
                 teachers: None,
                 students: None,
@@ -111,6 +127,7 @@ pub fn convert_solver_to_timetable(solver: &ACOSolver) -> Result<TimeTable, Box<
                     .map(|_| true),
                 size: Some(classes[class_id].serial_size),
                 violations: Some(cells_violations[class_id].clone()),
+                tool_tip_message: tool_tip_message[class_id].clone(),
             });
     }
 

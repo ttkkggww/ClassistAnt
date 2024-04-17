@@ -29,6 +29,7 @@ pub struct ActiveCell {
     pub is_locked: Option<bool>,
     pub size: Option<usize>,
     pub violations: Option<CellsViolation>,
+    pub tool_tip_message: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
