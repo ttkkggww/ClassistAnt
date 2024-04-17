@@ -26,11 +26,12 @@ class ActiveCell {
   className: string;
   room: number;
   period: number;
-  constructor(id: number,room:number,period:number ,className: string) {
+  constructor(id: number,room:number,period:number ,className: string,toolTimeMessage:string) {
     this.id = id;
     this.className = className;
     this.room = room;
     this.period = period;
+    this.toolTipMessage = toolTimeMessage;
   }
   teachers?: string[];
   students?: string[];
@@ -38,6 +39,7 @@ class ActiveCell {
   isLocked?: boolean;
   size?: number;
   violations?: cellsViolations;
+  toolTipMessage: string;
 }
 
 class BlankCell {
@@ -50,6 +52,7 @@ class BlankCell {
     this.period = period;
     this.room = room;
     this.isVisible = false;
+
   }
   size?: number;
 }
@@ -153,6 +156,7 @@ const GridComponent: React.FC<GridProps> = ({ timeTable, setTimeTable ,rooms,per
                   grid_size={cellData.size ?? 1}
                   setTimeTable={setTimeTable}
                   isViolated={cellData.violations?.is_violated ?? false}
+                  toolTipMessage={cellData.toolTipMessage}
                 />
               );
             }else {
