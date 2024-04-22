@@ -1,7 +1,7 @@
 import Input from "./Input/Input";
 import { invoke } from "@tauri-apps/api/tauri";
 import Grid from "./Grid/Grid";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { TimeTable } from "./Grid/Grid";
 
 interface GeneratorProps {
@@ -13,17 +13,19 @@ const Generator: React.FC<GeneratorProps> = ({ tableNames }) => {
   let [rooms,SetRooms] = useState([] as string[]);
   let [periods,SetPeriods] = useState([] as string[]);
 
-  invoke<string[]>("handle_get_rooms").then((res) => {
-    SetRooms(res);
-  }).catch((err) => {
-    SetRooms([err]);
-  });
+  useEffect(() => {
+    invoke<string[]>("handle_get_rooms").then((res) => {
+      SetRooms(res);
+    }).catch((err) => {
+      SetRooms([err]);
+    });
 
-  invoke<string[]>('handle_get_periods').then((res) => {
-    SetPeriods(res);
-  }).catch((err) => {
-    SetPeriods([err]);
-  });
+    invoke<string[]>('handle_get_periods').then((res) => {
+      SetPeriods(res);
+    }).catch((err) => {
+      SetPeriods([err]);
+    });
+  },[timeTable]);
 
   const sendClassData = () => {
     invoke("handle_set_input");

@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::convert::AsMut;
+use super::super::aco::violations::CellsViolation;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -27,6 +28,8 @@ pub struct ActiveCell {
     pub color: Option<String>,
     pub is_locked: Option<bool>,
     pub size: Option<usize>,
+    pub violations: Option<CellsViolation>,
+    pub tool_tip_message: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

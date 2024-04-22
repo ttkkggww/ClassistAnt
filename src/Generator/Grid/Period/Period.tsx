@@ -9,6 +9,7 @@ export function Period({id,name,styles}:periodProps) {
     const style = {
         gridArea: `${id}/1/${id+1}/2`,
         backgroundColor: 'white',
+        border: '1px solid black',
     }
     
     return (
