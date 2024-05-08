@@ -1,137 +1,145 @@
+//変換を作る
 pub mod cell;
 
 use cell::ActiveCell;
 use cell::BlankCell;
-use cell::Cell;
 use rand::seq::index;
 use core::str;
+use core::time;
 use std::error::Error;
-use std::fmt::format;
 use std::sync::Mutex;
-use crate::input::class;
+use crate::input::class::Class;
+use crate::input::room;
 
 use super::aco::aco_solver::ACOSolver;
 use super::aco::aco_solver::ACOSolverManager;
-use super::aco::violations;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct TimeTable {
-    pub cells: Vec<Cell>,
+    pub class_list: Vec<Option<ActiveCell>>,
+    pub process_table: Vec<Vec<Option<Class>>>,
+    pub room_size: usize,
+    pub period_size: usize,
+}
+//TODO timeTableに関する操作を抽象化して、それぞれの操作を関数で行う。
+//座標とindexを連動させるべきではない
+
+impl TimeTable {
+    pub fn new(room_size:usize,period_size:usize,class_size:usize) -> TimeTable{
+        let mut class_list = Vec::<Option<ActiveCell>>::new();
+        let mut process_table = Vec::<Vec<Option<Class>>>::new();
+        for i in 0..room_size {
+            let mut row = Vec::<BlankCell>::new();
+            for j in 0..period_size {
+                row.push(
+                    BlankCell{
+                        id: i * period_size + j,
+                        room: i,
+                        period: j,
+                        is_visible: true,
+                        size: Some(1),
+                    }
+                );  
+            }
+        }
+        for _ in 0..class_size{
+            class_list.push(None);
+        }
+        for _ in 0..room_size {
+            let mut row = Vec::<Option<Class>>::new();
+            for _ in 0..period_size {
+                row.push(None);
+            }
+            process_table.push(row);
+        }
+        TimeTable {
+            class_list,
+            process_table,
+            room_size,
+            period_size,
+        }
+    }
+
+    pub fn get_class(&self,room:usize,period:usize) -> Option<Class>{
+        self.process_table[room][period].clone()
+    }
+
+    pub fn add_class(&mut self,room:usize,period:usize,class:Class,color:Option<String>){
+        for i in 0..class.serial_size {
+            self.process_table[room][period+i] = Some(class.clone());
+        }
+        let id = room * self.period_size + period;
+        self.class_list[class.index] = Some(ActiveCell {
+            id: id + self.period_size * self.room_size,
+            period: period,
+            room: room,
+            class_index: class.index,
+            class_name: format!("{},{},{}",id,class.index,class.name),
+            teachers: None,
+            students: None,
+            color: color,
+            is_locked: None,
+            size: Some(class.serial_size),
+            violations: None,
+            tool_tip_message: "".to_string(),
+        });
+            
+    }
+    pub fn debug_class_list(&self){
+        println!("class_list size{}",self.class_list.len());
+        for i in self.class_list.iter() {
+            if let Some(class) = i {
+                println!("class:{},{}",class.class_index,class.class_name);
+            }else{
+                println!("None");
+            }
+        }
+    }
+
+    pub fn debug_process_table(&self){
+        for i in 0..self.room_size {
+            for j in 0..self.period_size {
+                if let Some(class) = self.process_table[i][j].as_ref() {
+                    print!("{:5}",class.index);
+                }else{
+                    print!(" None");
+                }
+            }
+            println!("");
+        }
+    }
+
+    pub fn remove_class(& mut self,room:usize,period:usize){
+        println!("remove class:{},{}",room,period);
+        let serial_size = self.process_table[room][period].as_ref().unwrap().serial_size;
+        let class_index = self.process_table[room][period].as_ref().unwrap().index; 
+        for i in 0..serial_size {
+            self.process_table[room][period+i] = None;
+        }
+        self.class_list[class_index] = None;
+    }
+
+    pub fn move_class(&mut self,from_room:usize,from_period:usize,to_room:usize,to_period:usize,color:Option<String>){
+        let class = self.get_class(from_room, from_period);
+        self.remove_class(from_room, from_period);
+        self.add_class(to_room, to_period, class.unwrap(),color);
+        self.debug_process_table();
+    }
+
 }
 
-pub fn convert_solver_to_timetable(solver: &ACOSolver) -> Result<TimeTable, Box<dyn Error>> {
-    let mut cells = Vec::<Cell>::new();
-    //TODO:ここの変換の調整
-    let best_ant = solver.get_best_ant().ok_or("No best ant found")?;
-    for room in 0..solver.parameters.num_of_rooms {
-        for period in 0..solver.parameters.num_of_periods {
-            cells.push(Cell::BlankCell(BlankCell {
-                id: (room * solver.parameters.num_of_periods + period) as usize,
-                room: room as usize,
-                period: period as usize,
-                is_visible: true,
-                size: Some(1),
-            }));
-        }
-    }
-    let classes = solver.input.get_classes().clone();
-    let mut cells_violations = Vec::new();
-    let mut tool_tip_message = Vec::new();
-    {
-        for i in 0..(solver.parameters.num_of_classes) {
-            cells_violations.push(
-                violations::CellsViolation {
-                    is_violated: false,
-                    same_student_same_time: Vec::new(),
-                    same_teacher_same_time: Vec::new(),
-                    capacity_over: Vec::new(),
-                    strabble_days: Vec::new(),
-                }
-            );
-            tool_tip_message.push("".to_string());
-        }
-        let same_tercher_same_time = solver.get_best_ant_same_teacher_violations_strictly();
-        let same_student_same_time = solver.get_best_ant_same_group_violations_strictly();
-        let capacity_over = solver.get_best_ant_capacity_violations();
-        let strabble_days = solver.get_best_ant_strabble_days_violations();
-        let class_index_talbe = solver.get_class_index_time_table();
-        for violation in same_tercher_same_time {
-            for room in violation.clone().rooms {
-                let period = violation.period;
-                let index = class_index_talbe[room][period];
-                cells_violations[index].is_violated = true;
-                cells_violations[index].same_teacher_same_time.push(violation.clone());
-                let room_names: Vec<_> = violation.rooms.clone()
-                    .iter()
-                    .map(|room| solver.input.get_rooms()[*room].name.clone())
-                    .collect();
-                tool_tip_message[index] =  format!("{}\n同じ教師が同じ時間に複数のクラスを持っています。{:?}",tool_tip_message[index],room_names);
-            }
-            
-        }
-        for violation in same_student_same_time {
-            for room in violation.clone().rooms {
-                let period = violation.period;
-                let index   = class_index_talbe[room][period];
-                cells_violations[index].is_violated = true;
-                cells_violations[index].same_student_same_time.push(violation.clone());
-                let room_names: Vec<_> = violation.rooms.clone()
-                    .iter()
-                    .map(|room| solver.input.get_rooms()[*room].name.clone())
-                    .collect();
-                tool_tip_message[index] = format!("{}\n同じ生徒が同じ時間に複数のクラスを持っています。{:?}",tool_tip_message[index],room_names);
-            }
-        }
-        for violation in capacity_over {
-            for room in violation.clone().rooms {
-                let period = violation.period;
-                cells_violations[room].is_violated = true;
-                cells_violations[room].capacity_over.push(violation.clone());
-                tool_tip_message[room] = format!("{}\n教室のキャパシティを超えています。",tool_tip_message[room]);
-            }
-        }
-        for strabble_day in strabble_days {
-            for room in strabble_day.clone().rooms {
-                let period = strabble_day.period;
-                let index = class_index_talbe[room][period];
-                cells_violations[index].is_violated = true;
-                cells_violations[index].strabble_days.push(strabble_day.clone());
-                tool_tip_message[index] = format!("{}\n教室が日を跨いでいます。",tool_tip_message[index]);
-            }
-        }
-    }
-    for (class_id, &[room_id, period_id]) in best_ant.get_corresponding_crp().iter().enumerate() {
-        let id = room_id * (solver.parameters.num_of_periods as usize) + period_id;
-        let class = classes[class_id].clone();
-        let teacher_names: Vec<_>= class.teacher_indexes.iter().map(|x| solver.input.get_teachers()[*x].name.clone()).collect();
-        cells[room_id as usize * solver.parameters.num_of_periods as usize + period_id as usize] =
-            Cell::ActiveCell(ActiveCell {
-                id: id as usize,
-                period: period_id as usize,
-                room: room_id as usize,
-                class_index: class_id as usize,
-                class_name: format!(
-                    "{}:{}:{:?}",
-                    id.to_string(),
-                    (classes[class_id].get_name().clone()),
-                    teacher_names
-                ),
-                teachers: None,
-                students: None,
-                color: Some(calc_color_init(solver, class_id, room_id, period_id)),
-                is_locked: solver
-                    .colony
-                    .get_graph()
-                    .get_classes_is_locked(class_id)
-                    .map(|_| true),
-                size: Some(classes[class_id].serial_size),
-                violations: Some(cells_violations[class_id].clone()),
-                tool_tip_message: tool_tip_message[class_id].clone(),
-            });
-    }
 
-    Ok(TimeTable { cells })
+pub fn convert_solver_to_timetable(solver: &ACOSolver) -> Result<TimeTable, Box<dyn Error>> {
+    let mut time_table = TimeTable::new(solver.parameters.num_of_rooms, solver.parameters.num_of_periods,solver.input.get_classes().len());
+    let best_ant = solver.get_best_ant().ok_or("No best ant found")?;
+    let classes = solver.input.get_classes();
+    for (class_id, &[room_id, period_id]) in best_ant.get_corresponding_crp().iter().enumerate() {
+        let class = classes[class_id].clone();
+        time_table.add_class(room_id, period_id, class, Some(calc_color_init(solver, class_id, room_id, period_id)));
+    }
+    Ok(time_table)
 }
 
 pub struct TimeTableManager {
@@ -195,35 +203,43 @@ fn calc_color_from_cell(solver: &ACOSolver, active_cell: &ActiveCell) -> String 
 
 #[tauri::command]
 pub fn is_swappable(
-    timetable_manager: tauri::State<'_, TimeTableManager>,
+    time_table_manager: tauri::State<'_, TimeTableManager>,
     solver_manager: tauri::State<'_, ACOSolverManager>,
     over_id: usize,
     active_id: usize,
 ) -> Result<bool, String> {
-    let managed_timetable = timetable_manager.timetable_manager.lock().unwrap();
+    println!("called is_swappable,{},{}", over_id, active_id);
     let managed_solver = solver_manager.solver.lock().unwrap();
     let parameter = managed_solver
         .as_ref()
         .ok_or("No solver found")?
         .parameters
         .clone();
+
     let periods_size = parameter.num_of_periods;
-    let mut over_remain = over_id % periods_size;
+    let rooms_size = parameter.num_of_rooms;
     let mut is_swappable = true;
-    if let Some(timetable) = managed_timetable.as_ref() {
-        if let Cell::ActiveCell(active_cell) = timetable.cells[active_id].clone() {
-            for index in over_id..(over_id + active_cell.size.unwrap_or(1)) {
-                if let Cell::ActiveCell(active_cell) = timetable.cells[index].clone() {
-                    if active_cell.id != active_id {
-                        is_swappable = false;
-                    }
+    let over_room = over_id / periods_size;
+    let over_period = over_id % periods_size;
+    if let Some(time_table) = time_table_manager.timetable_manager.lock().unwrap().as_ref() {
+        time_table.debug_process_table();
+        time_table.debug_class_list();
+        println!("active_id:{},room:{},period:{}",active_id-periods_size*rooms_size,(active_id-rooms_size*periods_size)/periods_size,active_id%periods_size);
+        let active_size = time_table.process_table[(active_id-rooms_size*periods_size)/periods_size][active_id%periods_size].as_ref().unwrap().serial_size;
+        //no over the day
+        let active_index = time_table.process_table[(active_id-rooms_size*periods_size)/periods_size][active_id%periods_size].as_ref().unwrap().index;
+        for day in over_period..(over_period + active_size) {
+            if day >= periods_size {
+                is_swappable = false;
+                break;
+            }
+            if let Some(class) = time_table.process_table[over_room][day].as_ref() {
+                if class.index != active_index {
+                    is_swappable = false;
+                    break;
                 }
             }
-            over_remain += active_cell.size.unwrap_or(1);
         }
-    }
-    if over_remain > periods_size {
-        is_swappable = false;
     }
     return Ok(is_swappable);
 }
@@ -232,75 +248,50 @@ pub fn is_swappable(
 #[tauri::command]
 pub fn handle_swap_cell(
     timetable_manager: tauri::State<'_, TimeTableManager>,
+    solver_manager: tauri::State<'_, ACOSolverManager>,
     over_id: usize,
     active_id: usize,
 ) -> Result<TimeTable, String> {
+    println!("called handle_swap_cell,{},{}", over_id, active_id);
     let mut managed_timetable = timetable_manager.timetable_manager.lock().unwrap();
-    let mut new_timetable;
-    if let Some(timetable) = managed_timetable.as_mut() {
-        new_timetable = timetable.clone();
-        if let Cell::ActiveCell(active_cell) = new_timetable.cells[active_id].clone() {
-            if let Cell::BlankCell(blank_cell) = new_timetable.cells[over_id].clone() {
-                new_timetable.cells[active_id] = Cell::BlankCell(blank_cell.clone());
-                match &mut new_timetable.cells[active_id] {
-                    Cell::BlankCell(blank_cell) => {
-                        blank_cell.id = active_cell.id;
-                        blank_cell.room = active_cell.room;
-                        blank_cell.period = active_cell.period.clone();
-                        blank_cell.is_visible = true;
-                    }
-                    _ => (),
-                }
-                new_timetable.cells[over_id] = Cell::ActiveCell(active_cell.clone());
-                match &mut new_timetable.cells[over_id] {
-                    Cell::ActiveCell(active_cell) => {
-                        active_cell.class_name =
-                            format!("{}:{}", over_id.to_string(), active_cell.class_name.clone());
-                        active_cell.id = blank_cell.id;
-                        active_cell.room = blank_cell.room;
-                        active_cell.period = blank_cell.period;
-                    }
-                    _ => (),
-                }
-                println!("Swaped cells");
-                match &mut new_timetable.cells[over_id] {
-                    Cell::ActiveCell(active_cell) => {
-                        active_cell.is_locked = Some(true);
-                        active_cell.color = Some("#AAAAFF".to_string());
-                    }
-                    _ => (),
-                }
-            }
-        }
-    } else {
-        return Err("No timetable found".to_string());
+    let solver = solver_manager.solver.lock().unwrap();
+    if let Some(time_table) = managed_timetable.as_mut() {
+        let room_size = time_table.room_size; 
+        let period_size = time_table.period_size;
+        let new_id = active_id - period_size*room_size;
+        let active_period = new_id % period_size;
+        let active_room = new_id / period_size;
+        let over_period = over_id % period_size;
+        let over_room = over_id / period_size;
+        let index = time_table.process_table[active_room][active_period].as_ref().unwrap().index;
+        let color = calc_color_from_cell(solver.as_ref().unwrap(), time_table.class_list[index].as_ref().unwrap());
+        time_table.move_class(active_room,active_period, over_room, over_period,Some(color));
+        return Ok(time_table.clone());
     }
-    let active_cell_size = match &new_timetable.cells[over_id] {
-        Cell::ActiveCell(active_cell) => active_cell.size.unwrap_or(1),
-        _ => 1,
-    };
-    *managed_timetable = Some(new_timetable.clone());
-    return Ok(new_timetable);
+    return Err("No timetable found".to_string());
 }
 
 #[tauri::command]
 pub fn handle_switch_lock(
     timetable_manager: tauri::State<'_, TimeTableManager>,
-    acosolver_manager: tauri::State<'_, ACOSolverManager>,
+    solver_manager: tauri::State<'_, ACOSolverManager>, 
     id: usize,
 ) -> Result<TimeTable, String> {
     println!("called handle_switch_lock,{}", id);
-    //このidはindexを指さない
     let mut managed_timetable = timetable_manager.timetable_manager.lock().unwrap();
-    let mut managed_solver = acosolver_manager.solver.lock().unwrap();
-    if let Some(timetable) = managed_timetable.as_mut() {
-        if let Some(solver) = managed_solver.as_mut() {
-            if let Cell::ActiveCell(active_cell) = timetable.cells[id].as_mut() {
-                active_cell.is_locked = Some(!active_cell.is_locked.unwrap_or(false));
-                active_cell.color = Some(calc_color_from_cell(solver, active_cell));
-            }
-        }
-        return Ok(timetable.clone());
+    let solver = solver_manager.solver.lock().unwrap();
+    if let Some(time_table) = managed_timetable.as_mut() {
+        let room = (id-time_table.room_size * time_table.period_size) / time_table.period_size;
+        let period = (id - time_table.room_size * time_table.period_size) % time_table.period_size;
+        let class_index = time_table.process_table[room][period].as_ref().unwrap().index;
+        
+        time_table.class_list[class_index].as_mut().unwrap().is_locked = Some(
+            !time_table.class_list[class_index].as_ref().unwrap().is_locked.unwrap_or(false),
+        );
+        time_table.class_list[class_index].as_mut().unwrap().color = Some(
+            calc_color_from_cell(solver.as_ref().unwrap(), time_table.class_list[class_index].as_ref().unwrap()),
+        );
+        return Ok(time_table.clone());
     }
     return Err("No timetable found".to_string());
 }

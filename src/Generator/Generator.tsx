@@ -9,7 +9,7 @@ interface GeneratorProps {
 }
 
 const Generator: React.FC<GeneratorProps> = ({ tableNames }) => {
-  let [timeTable, setTimeTable] = useState({ cells: [] } as TimeTable);
+  let [timeTable, setTimeTable] = useState({ classList: [] ,roomSize:0,periodSize:0} as TimeTable);
   let [rooms,SetRooms] = useState([] as string[]);
   let [periods,SetPeriods] = useState([] as string[]);
 
@@ -34,8 +34,8 @@ const Generator: React.FC<GeneratorProps> = ({ tableNames }) => {
     invoke("handle_adapt_input");
   };
   const run_once = () => {
-    if (timeTable.cells.length != 0){
-      invoke("handle_read_cells",{cells:timeTable.cells});
+    if (timeTable.classList.length != 0){
+      invoke("handle_read_cells",{cells:timeTable.classList});
     }
     invoke<TimeTable>("handle_aco_run_once")
       .then((res) => {

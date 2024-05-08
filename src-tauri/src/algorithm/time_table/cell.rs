@@ -9,6 +9,14 @@ pub enum Cell {
     BlankCell(BlankCell),
 }
 
+impl Cell {
+    pub fn get_size(&self) -> Option<usize> {
+        match self {
+            Cell::ActiveCell(active_cell) => active_cell.size,
+            Cell::BlankCell(blank_cell) => blank_cell.size,
+        }
+    }
+}
 impl AsMut<Cell> for Cell {
     fn as_mut(&mut self) -> &mut Cell {
         return self;

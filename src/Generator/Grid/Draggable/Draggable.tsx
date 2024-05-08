@@ -9,7 +9,6 @@ interface DraggableProps {
   text: string;
   id: number;
   styles: string;
-  classId: number;
   room: number;
   period: number;
   grid_size: number;
