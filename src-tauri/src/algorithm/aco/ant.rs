@@ -2,15 +2,21 @@ use super::aco_parameters::AcoParameters;
 use super::graph::{self, Graph};
 use super::violations::{self, Violations};
 use crate::input::class::{self, Class};
+use crate::input::teacher::Teacher;
 use crate::input::Input;
+use std::collections::BTreeSet;
+use crate::table_editor::Teachers;
 use rand::seq::SliceRandom;
 use std::collections::HashMap;
 use std::vec;
 
 static CAP_COEF: f64 = 2.0;
-static TEACHER_COEF: f64 = 3.0;
+static TEACHER_COEF: f64 = 5.0;
 static STUDENT_COEF: f64 = 3.0;
+static ABSENT_DAYS_COEF: f64 = 3.0;
 static STRADDLE_DAYS_COEF: f64 = 1.0;
+static COLLECTION_COEF: f64 = 1.0;
+static SEQUENTIAL_FROM_START_COEF: f64 = 1.0;
 
 #[derive(Clone)]
 pub struct Ant {
@@ -155,6 +161,16 @@ impl Ant {
                 length[*period] += (ftime * (ftime - 1.0) / 2.0 as f64) * TEACHER_COEF;
             }
         }
+        for class_id in 0..self.corresponding_crp.len() {
+            let [room, period] = self.corresponding_crp[class_id];
+            let absent_days = self.calc_absent_days(
+                &graph.get_class_ref(class_id).get_teacher_indexes(),
+                graph.get_teachers_ref(),
+            );
+            if(absent_days.contains(&period)){
+                length[period] += ABSENT_DAYS_COEF;
+            }
+       }
         length
     }
 
@@ -205,6 +221,14 @@ impl Ant {
         }
         res
     }
+    
+    fn calc_absent_days(&self,teacher_indices:&Vec<usize>,teachers:&Vec<Teacher>)->BTreeSet<usize>{
+        let mut res = BTreeSet::new();
+        for teacher_id in teacher_indices.iter() {
+            res.extend(teachers[*teacher_id].absent_days.clone());
+        }
+        res
+    }
 
     fn calc_prob_from_v(&self, v: usize, graph: &Graph) -> (Vec<[usize; 2]>, Vec<f64>) {
         let mut sum_pheromone = 0.0;
@@ -216,10 +240,12 @@ impl Ant {
 
         for [room, period] in self.calc_allocatable_room_periods(serial_size, graph) {
             let pre_pheromone = graph.get_pheromone(v, room, period);
+            
             let heuristics = self.parameters.q
                 / self.calc_edge_length(
                     graph.get_room_ref(room).get_capacity(),
                     graph.get_class_ref(v),
+                    &self.calc_absent_days(&graph.get_class_ref(v).get_teacher_indexes(),graph.get_teachers_ref()),
                     period as usize,
                 );
             let pheromone = pre_pheromone.powf(alpha) * heuristics.powf(beta);
@@ -256,6 +282,7 @@ impl Ant {
                     / self.calc_edge_length(
                         graph.get_room_ref(room).get_capacity(),
                         graph.get_class_ref(v),
+                        &self.calc_absent_days(&graph.get_class_ref(v).get_teacher_indexes(),graph.get_teachers_ref()),
                         period as usize,
                     );
                 let pheromone = pre_pheromone.powf(alpha) * heuristics.powf(beta);
@@ -265,18 +292,20 @@ impl Ant {
                 to_pheromones.push(pheromone);
             }
         }
-        let mut to_prob = to_pheromones
+        let to_prob = to_pheromones
             .iter()
             .map(|x| x / sum_pheromone)
             .collect::<Vec<f64>>();
         (to_vertexes, to_prob)
     }
 
-    fn calc_edge_length(&self, room_capacity: usize, class: &Class, period: usize) -> f64 {
+    fn calc_edge_length(&self, room_capacity: usize, class: &Class, absent_days: &BTreeSet<usize>,period: usize) -> f64 {
         let mut edge_length = 1.0;
+        //capacity violation
         if class.get_num_of_students() > room_capacity {
             edge_length += CAP_COEF;
         }
+        //students violation
         for id in class.get_students_group_indexes().iter() {
             if let Some(times) = self.students_times.get(*id as usize) {
                 if let Some(time) = times.get(&(period as usize)) {
@@ -285,6 +314,7 @@ impl Ant {
                 }
             }
         }
+        //teachers violation
         for id in class.get_teacher_indexes().iter() {
             if let Some(times) = self.teachers_times.get(*id as usize) {
                 if let Some(time) = times.get(&(period as usize)) {
@@ -293,9 +323,13 @@ impl Ant {
                 }
             }
         }
+        //teacher abset days violation
+        if absent_days.contains(&period) {
+            edge_length += ABSENT_DAYS_COEF;
+        }
+        //straddle days violation
         if (period % self.parameters.num_of_day_lengths) + class.serial_size
-            > self.parameters.num_of_day_lengths
-        {
+            > self.parameters.num_of_day_lengths{
             edge_length += STRADDLE_DAYS_COEF;
         }
         edge_length

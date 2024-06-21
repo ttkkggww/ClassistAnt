@@ -1,7 +1,9 @@
 use super::super::time_table::cell::Cell;
 use super::aco_parameters::AcoParameters;
+use crate::algorithm::time_table::cell::ActiveCell;
 use crate::input::class::{self, Class};
 use crate::input::room::Room;
+use crate::input::teacher::{self, Teacher};
 
 #[derive(Clone)]
 pub struct Edge {
@@ -22,10 +24,11 @@ pub struct Graph {
     parameters: AcoParameters,
     classes: Vec<Class>,
     rooms: Vec<Room>,
+    teachers: Vec<Teacher>
 }
 
 impl Graph {
-    pub fn new(parameters: AcoParameters, classes: Vec<Class>, rooms: Vec<Room>) -> Graph {
+    pub fn new(parameters: AcoParameters, classes: Vec<Class>, rooms: Vec<Room>,teachers:Vec<Teacher>) -> Graph {
         let num_of_classes = parameters.num_of_classes;
         let num_of_rooms = parameters.num_of_rooms;
         let num_of_periods = parameters.num_of_periods;
@@ -55,6 +58,7 @@ impl Graph {
             parameters,
             classes,
             rooms,
+            teachers
         };
         res.prepare_graph();
         return res;
@@ -133,6 +137,12 @@ impl Graph {
     pub fn get_room_ref(&self, room_index: usize) -> &Room {
         return &self.rooms[room_index];
     }
+    pub fn get_teacher_ref(&self, teacher_index: usize) -> &Teacher {
+        return &self.teachers[teacher_index];
+    }
+    pub fn get_teachers_ref(&self) -> &Vec<Teacher> {
+        return &self.teachers;
+    }
 
     #[allow(dead_code)]
     pub fn add_pheromone(
@@ -194,22 +204,19 @@ impl Graph {
             self.parameters.q * max_pheromone;
     }
 
-    pub fn load_cells(&mut self, cells: &Vec<Cell>) {
+    pub fn load_cells(&mut self, cells: &Vec<Option<ActiveCell>>) {
         for (i, cell) in cells.iter().enumerate() {
-            match cell {
-                Cell::ActiveCell(active_cell) => {
-                    if let Some(is_locked) = active_cell.is_locked {
-                        if is_locked {
-                            self.classes_is_locked[active_cell.class_index] =
-                                Some((active_cell.room, active_cell.period));
-                        } else {
-                            self.classes_is_locked[active_cell.class_index] = None;
-                        }
+            if let Some(active_cell) = cell {
+                if let Some(is_locked) = active_cell.is_locked {
+                    if is_locked {
+                        self.classes_is_locked[active_cell.class_index] =
+                            Some((active_cell.room, active_cell.period));
                     } else {
                         self.classes_is_locked[active_cell.class_index] = None;
                     }
+                } else {
+                    self.classes_is_locked[active_cell.class_index] = None;
                 }
-                Cell::BlankCell(_) => {}
             }
         }
     }

@@ -13,7 +13,7 @@ impl Cell {
     pub fn get_size(&self) -> Option<usize> {
         match self {
             Cell::ActiveCell(active_cell) => active_cell.size,
-            Cell::BlankCell(blank_cell) => blank_cell.size,
+            Cell::BlankCell(blank_cell) => Some(1),
         }
     }
 }
@@ -46,6 +46,5 @@ pub struct BlankCell {
     pub id: usize,
     pub period: usize,
     pub room: usize,
-    pub is_visible: bool,
-    pub size: Option<usize>,
+    pub color: Option<String>,
 }

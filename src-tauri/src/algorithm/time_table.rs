@@ -3,22 +3,26 @@ pub mod cell;
 
 use cell::ActiveCell;
 use cell::BlankCell;
-use rand::seq::index;
+use core::num;
 use core::str;
-use core::time;
 use std::error::Error;
 use std::sync::Mutex;
 use crate::input::class::Class;
-use crate::input::room;
+use std::collections::BTreeSet;
 
 use super::aco::aco_solver::ACOSolver;
 use super::aco::aco_solver::ACOSolverManager;
+use super::aco::violations;
+use super::aco::violations::CellsViolation;
+use super::aco::violations::Violations;
 use serde::{Deserialize, Serialize};
+use crate::input::room::Room;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TimeTable {
     pub class_list: Vec<Option<ActiveCell>>,
+    pub dragging_cell_data: Vec<Vec<Vec<Option<BlankCell>>>>,
     pub process_table: Vec<Vec<Option<Class>>>,
     pub room_size: usize,
     pub period_size: usize,
@@ -30,20 +34,6 @@ impl TimeTable {
     pub fn new(room_size:usize,period_size:usize,class_size:usize) -> TimeTable{
         let mut class_list = Vec::<Option<ActiveCell>>::new();
         let mut process_table = Vec::<Vec<Option<Class>>>::new();
-        for i in 0..room_size {
-            let mut row = Vec::<BlankCell>::new();
-            for j in 0..period_size {
-                row.push(
-                    BlankCell{
-                        id: i * period_size + j,
-                        room: i,
-                        period: j,
-                        is_visible: true,
-                        size: Some(1),
-                    }
-                );  
-            }
-        }
         for _ in 0..class_size{
             class_list.push(None);
         }
@@ -54,8 +44,10 @@ impl TimeTable {
             }
             process_table.push(row);
         }
+        let dragging_cell_data = vec![vec![vec![None;period_size];room_size];class_size];
         TimeTable {
             class_list,
+            dragging_cell_data,
             process_table,
             room_size,
             period_size,
@@ -66,27 +58,33 @@ impl TimeTable {
         self.process_table[room][period].clone()
     }
 
-    pub fn add_class(&mut self,room:usize,period:usize,class:Class,color:Option<String>){
+    pub fn add_class(&mut self,room:usize,period:usize,class:Class,color:Option<String>,solver:&ACOSolver){
         for i in 0..class.serial_size {
             self.process_table[room][period+i] = Some(class.clone());
         }
+        let mut is_locked= None;
+        if let Some(_) = solver.colony.get_graph().get_classes_is_locked(class.index) {
+            is_locked = Some(true);
+        }
         let id = room * self.period_size + period;
+        let tearchers = solver.input.get_teachers();
         self.class_list[class.index] = Some(ActiveCell {
             id: id + self.period_size * self.room_size,
             period: period,
             room: room,
             class_index: class.index,
             class_name: format!("{},{},{}",id,class.index,class.name),
-            teachers: None,
+            teachers: Some(class.teacher_indexes.iter().map(|&x|tearchers[x].name.clone()).collect()),
             students: None,
             color: color,
-            is_locked: None,
+            is_locked: is_locked,
             size: Some(class.serial_size),
             violations: None,
             tool_tip_message: "".to_string(),
         });
             
     }
+    
     pub fn debug_class_list(&self){
         println!("class_list size{}",self.class_list.len());
         for i in self.class_list.iter() {
@@ -97,7 +95,7 @@ impl TimeTable {
             }
         }
     }
-
+    
     pub fn debug_process_table(&self){
         for i in 0..self.room_size {
             for j in 0..self.period_size {
@@ -110,7 +108,13 @@ impl TimeTable {
             println!("");
         }
     }
-
+    
+    fn update_violations(&mut self,room:usize,period:usize,room_list:&Vec<Room>,one_day_length:usize){
+        let violations = self.get_new_violations(room,period,room_list,one_day_length);
+        let class_idx = self.process_table[room][period].as_ref().unwrap().index;
+        self.class_list[class_idx].as_mut().unwrap().violations = Some(violations);
+    }
+    
     pub fn remove_class(& mut self,room:usize,period:usize){
         println!("remove class:{},{}",room,period);
         let serial_size = self.process_table[room][period].as_ref().unwrap().serial_size;
@@ -121,23 +125,205 @@ impl TimeTable {
         self.class_list[class_index] = None;
     }
 
-    pub fn move_class(&mut self,from_room:usize,from_period:usize,to_room:usize,to_period:usize,color:Option<String>){
+    pub fn move_class(&mut self,from_room:usize,from_period:usize,to_room:usize,to_period:usize,color:Option<String>,solver:&ACOSolver){
         let class = self.get_class(from_room, from_period);
+        let mut pre_violations:Option<CellsViolation> = None;
+        if let Some(input_class) = &class {
+            if let Some(cell_input) = &self.class_list[input_class.index] {
+                pre_violations = cell_input.violations.clone();
+            }
+        }
         self.remove_class(from_room, from_period);
-        self.add_class(to_room, to_period, class.unwrap(),color);
+        self.add_class(to_room, to_period, class.clone().unwrap(),color,solver);
+        let room_list = solver.input.get_rooms();
+        let violations = self.get_new_violations(to_room,to_period , room_list, solver.parameters.num_of_day_lengths);
+        let class_idx = self.process_table[to_room][to_period].as_ref().unwrap().index;
+        self.class_list[class_idx].as_mut().unwrap().violations = Some(violations);
+        if let Some(violations) = pre_violations {
+            for violation in violations.same_student_same_time {
+                let period = violation.period;
+                for room in violation.rooms {
+                    self.update_violations(room, period, room_list, solver.parameters.num_of_day_lengths);
+                }
+            }
+        }
+        let mut post_violations:Option<CellsViolation> = None;
+        if let Some(input_class) = &class {
+            if let Some(cell_input) = &self.class_list[input_class.index] {
+                post_violations = cell_input.violations.clone();
+            }
+        }
+        if let Some(violations) = post_violations {
+            for violation in violations.same_student_same_time {
+                let period = violation.period;
+                for room in violation.rooms {
+                    self.update_violations(room, period, room_list, solver.parameters.num_of_day_lengths);
+                }
+            }
+        }
         self.debug_process_table();
     }
 
+    pub fn calc_same_student_same_time(&self,room_id:usize,period_id:usize) -> Vec<Violations> {
+        let mut violations = Vec::<Violations>::new();
+        let serial_size = self.process_table[room_id][period_id].as_ref().unwrap().serial_size;
+        let students = self.process_table[room_id][period_id].as_ref().unwrap().students_group_indexes.clone();
+        let class_idx = self.process_table[room_id][period_id].as_ref().unwrap().index;
+        for time in period_id..(period_id+serial_size) {
+            for room in 0..self.room_size {
+                if time == period_id && room == room_id {
+                    continue;
+                }
+                if let Some(class) = self.process_table[room][time].as_ref() {
+                    if class.index == class_idx {
+                        continue;
+                    }
+                    let mut common_students = class.students_group_indexes.
+                        clone();
+                    common_students.retain(|&x| students.contains(&x));
+                    if common_students.len() > 0 {
+                        violations.push(Violations{
+                            period: time,
+                            rooms: vec![room],
+                        });
+                    }
+                }
+            }
+        }
+        violations
+    }
+    
+    pub fn common_ids(ids1:&Vec<usize>,ids2:&Vec<usize>) -> Vec<usize> {
+        let mut common_ids = Vec::<usize>::new();
+        for id in ids1 {
+            if ids2.contains(id) {
+                common_ids.push(*id);
+            }
+        }
+        common_ids
+    }
+    
+    pub fn calc_same_teacher_same_time(&self,room_id:usize,period_id:usize) -> Vec<Violations> {
+        let mut violations = Vec::<Violations>::new();
+        let serial_size = self.process_table[room_id][period_id].as_ref().unwrap().serial_size;
+        let teachers = self.process_table[room_id][period_id].as_ref().unwrap().teacher_indexes.clone();
+        let class_idx = self.process_table[room_id][period_id].as_ref().unwrap().index;
+        for time in period_id..(period_id+serial_size) {
+            for room in 0..self.room_size {
+                if time == period_id && room == room_id {
+                    continue;
+                }
+                if let Some(class) = self.process_table[room][time].as_ref() {
+                    if class.index == class_idx {
+                        continue;
+                    }
+                    let mut common_teachers = class.teacher_indexes.clone();
+                    common_teachers.retain(|&x| teachers.contains(&x));
+                    if common_teachers.len() > 0 {
+                        violations.push(Violations{
+                            period: time,
+                            rooms: vec![room],
+                        });
+                    }
+                }
+            }
+        }
+        violations
+    }
+
+    pub fn calc_capacity_over(&self,room_id:usize,period_id:usize,room_list:&Vec<Room>) -> Vec<Violations> {
+        let mut violations = Vec::<Violations>::new();
+        let num_of_students = self.process_table[room_id][period_id].as_ref().unwrap().num_of_students;
+        let capacity = room_list[room_id].capacity;
+        if num_of_students > capacity {
+            violations.push(Violations{
+                period: period_id,
+                rooms: vec![room_id],
+            });
+        }
+        violations
+    }
+
+    pub fn calc_strabble_days(&self,room_id:usize,period_id:usize,one_day_length:usize) -> Vec<Violations> {
+        let mut violations = Vec::<Violations>::new();
+        let serial_size = self.process_table[room_id][period_id].as_ref().unwrap().serial_size;
+        let start_in_a_day = period_id % one_day_length;
+        if start_in_a_day +serial_size > one_day_length {
+            violations.push(Violations{
+                period: period_id,
+                rooms: vec![room_id],
+            });
+        }
+        violations
+    }
+
+    pub fn get_new_violations(& self,room_id:usize,period_id:usize,room_list:&Vec<Room>,one_day_length:usize) -> CellsViolation {
+        let same_student_same_time = self.calc_same_student_same_time(room_id, period_id);
+        let same_teacher_same_time = self.calc_same_teacher_same_time(room_id, period_id);
+        let capacity_over = self.calc_capacity_over(room_id, period_id, room_list);
+        let strabble_days = self.calc_strabble_days(room_id, period_id, one_day_length);
+        let mut is_violated:bool = false;
+        if same_student_same_time.len() > 0 || same_teacher_same_time.len() > 0 || capacity_over.len() > 0 || strabble_days.len() > 0 {
+            is_violated = true;
+        }
+        CellsViolation{
+            is_violated,
+            same_student_same_time,
+            same_teacher_same_time,
+            capacity_over,
+            strabble_days,
+        }
+    }
+
+    pub fn updated_by_process_table(&mut self,solver: &ACOSolver){
+        let is_locked_list = self.class_list.iter().map(|x|x.as_ref().unwrap().is_locked.unwrap_or(false)).collect::<Vec<bool>>();
+        self.class_list = Vec::<Option<ActiveCell>>::new();
+        self.dragging_cell_data = vec![vec![vec![None;self.period_size];self.room_size];solver.input.get_classes().len()];
+        let teachers = solver.input.get_teachers();
+        for i in 0..self.room_size {
+            for j in 0..self.period_size {
+                if let Some(class) = self.process_table[i][j].as_ref() {
+                    let id = i * self.period_size + j;
+                    self.class_list[class.index] = Some(ActiveCell {
+                        id: id + self.period_size * self.room_size,
+                        period: j,
+                        room: i,
+                        class_index: class.index,
+                        class_name: format!("{},{},{}",id,class.index,class.name),
+                        teachers: Some(class.teacher_indexes.iter().map(|&x|teachers[x].name.clone()).collect()),
+                        students: None,
+                        color: None,//ここsolverから取得する
+                        is_locked: Some(is_locked_list[class.index]),
+                        size: Some(class.serial_size),
+                        violations: None,
+                        tool_tip_message: "".to_string(),
+                    });
+                }else{
+                    self.class_list.push(None);
+                }
+            }
+        }
+        
+    }
 }
+
 
 
 pub fn convert_solver_to_timetable(solver: &ACOSolver) -> Result<TimeTable, Box<dyn Error>> {
     let mut time_table = TimeTable::new(solver.parameters.num_of_rooms, solver.parameters.num_of_periods,solver.input.get_classes().len());
     let best_ant = solver.get_best_ant().ok_or("No best ant found")?;
     let classes = solver.input.get_classes();
-    for (class_id, &[room_id, period_id]) in best_ant.get_corresponding_crp().iter().enumerate() {
+    for (class_id, &[room_id, period_id])in best_ant.get_corresponding_crp().iter().enumerate() {
         let class = classes[class_id].clone();
-        time_table.add_class(room_id, period_id, class, Some(calc_color_init(solver, class_id, room_id, period_id)));
+        time_table.add_class(room_id, period_id, class, Some(calc_color_init(solver, class_id, room_id, period_id)),solver);
+        
+    }
+    for cell in time_table.clone().class_list{
+        if let Some(cell) = cell {
+            let violations = Some(time_table.get_new_violations(cell.room, cell.period, &solver.input.get_rooms(), solver.parameters.num_of_day_lengths));
+            //println!("violations:{:?}",&violations);
+            time_table.class_list[cell.class_index].as_mut().unwrap().violations = violations;
+        }
     }
     Ok(time_table)
 }
@@ -177,7 +363,6 @@ fn get_pheromone_color(
     if let Some(ant) = solver.get_best_ant() {
         let (rp_v, prov_v) =
             ant.calc_prob_from_v_igunore_visited(class_id, solver.colony.get_graph());
-
         let mut prov = 0.0;
         for (i, rp) in rp_v.iter().enumerate() {
             if rp[0] == room_id && rp[1] == period_id {
@@ -264,8 +449,13 @@ pub fn handle_swap_cell(
         let over_period = over_id % period_size;
         let over_room = over_id / period_size;
         let index = time_table.process_table[active_room][active_period].as_ref().unwrap().index;
-        let color = calc_color_from_cell(solver.as_ref().unwrap(), time_table.class_list[index].as_ref().unwrap());
-        time_table.move_class(active_room,active_period, over_room, over_period,Some(color));
+        //これだと、一つ前のフェロモンが出てくる
+        let mut color = get_pheromone_color(solver.as_ref().unwrap(), index, over_room, over_period);
+        let is_locked = time_table.class_list[index].as_ref().unwrap().is_locked.unwrap_or(false);
+        if is_locked {
+            color = "#AAAAFF".to_string();
+        }
+        time_table.move_class(active_room,active_period, over_room, over_period,Some(color),solver.as_ref().unwrap());
         return Ok(time_table.clone());
     }
     return Err("No timetable found".to_string());

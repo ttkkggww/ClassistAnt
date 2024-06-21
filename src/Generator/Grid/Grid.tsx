@@ -14,7 +14,7 @@ interface Violations {
 }
 
 interface cellsViolations {
-  is_violated: boolean;
+  isViolated: boolean;
   sameStudentSameTime: Violations[];
   sameTeacherSameTime: Violations[];
   capacityOver: Violations[];
@@ -128,18 +128,49 @@ const Grid: React.FC<GridProps> = ({ timeTable, setTimeTable ,rooms,periods}) =>
           {
             classList.map((cell, index) => {
               if (cell!=null) {
+                let tipMessage = "";
+                if (cell.violations) {
+                  if (cell.violations.isViolated) {
+                    tipMessage = "This cell has some violations";
+                    console.log(cell.violations)
+                    if (cell.violations.sameStudentSameTime.length > 0) {
+                      tipMessage += "\nSame student in different rooms at the same time";
+                      tipMessage += cell.violations.sameStudentSameTime.map((violation) => {
+                        return "\nPeriod: " + violation.period + " Rooms: " + violation.rooms.join(",");
+                      });
+                    }
+                    if (cell.violations.sameTeacherSameTime.length > 0) {
+                      tipMessage += "\nSame teacher in different rooms at the same time";
+                      tipMessage += cell.violations.sameTeacherSameTime.map((violation) => {
+                        return "\nPeriod: " + violation.period + " Rooms: " + violation.rooms.join(",");
+                      });
+                    }
+                    if (cell.violations.capacityOver.length > 0) {
+                      tipMessage += "\nCapacity is over in some rooms";
+                      tipMessage += cell.violations.capacityOver.map((violation) => {
+                        return "\nPeriod: " + violation.period + " Rooms: " + violation.rooms.join(",");
+                      });
+                    }
+                    if (cell.violations.strabbleDays.length > 0) {
+                      tipMessage += "\nSame class in different days";
+                      tipMessage += cell.violations.strabbleDays.map((violation) => {
+                        return "\nPeriod: " + violation.period + " Rooms: " + violation.rooms.join(",");
+                      });
+                    }
+                  }
+                }
                 return (
                   <Draggable 
                     hex_color={cell.color?cell.color:"#ffffff"}
-                    text={cell.className}
+                    text={cell.className + cell.teachers?.join(",") }
                     id={cell.id} 
                     styles={styles["grid-cell"]}
                     room={cell.room}
                     period={cell.period}
                     grid_size={cell.size!}
                     setTimeTable={setTimeTable}
-                    isViolated={cell.violations?.is_violated!}
-                    toolTipMessage="test"
+                    isViolated={cell.violations?.isViolated!}
+                    toolTipMessage={tipMessage}
                   />
                 );
               }
