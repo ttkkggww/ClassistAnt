@@ -24,11 +24,16 @@ pub struct Graph {
     parameters: AcoParameters,
     classes: Vec<Class>,
     rooms: Vec<Room>,
-    teachers: Vec<Teacher>
+    teachers: Vec<Teacher>,
 }
 
 impl Graph {
-    pub fn new(parameters: AcoParameters, classes: Vec<Class>, rooms: Vec<Room>,teachers:Vec<Teacher>) -> Graph {
+    pub fn new(
+        parameters: AcoParameters,
+        classes: Vec<Class>,
+        rooms: Vec<Room>,
+        teachers: Vec<Teacher>,
+    ) -> Graph {
         let num_of_classes = parameters.num_of_classes;
         let num_of_rooms = parameters.num_of_rooms;
         let num_of_periods = parameters.num_of_periods;
@@ -58,7 +63,7 @@ impl Graph {
             parameters,
             classes,
             rooms,
-            teachers
+            teachers,
         };
         res.prepare_graph();
         return res;

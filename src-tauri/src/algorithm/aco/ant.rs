@@ -2,12 +2,14 @@ use super::aco_parameters::AcoParameters;
 use super::graph::{self, Graph};
 use super::violations::{self, Violations};
 use crate::input::class::{self, Class};
+use crate::input::room::Room;
+
 use crate::input::teacher::Teacher;
 use crate::input::Input;
-use std::collections::BTreeSet;
 use crate::table_editor::Teachers;
 use rand::seq::SliceRandom;
 use std::collections::HashMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::vec;
 
 static CAP_COEF: f64 = 2.0;
@@ -16,7 +18,7 @@ static STUDENT_COEF: f64 = 3.0;
 static ABSENT_DAYS_COEF: f64 = 3.0;
 static STRADDLE_DAYS_COEF: f64 = 1.0;
 static COLLECTION_COEF: f64 = 1.0;
-static SEQUENTIAL_FROM_START_COEF: f64 = 1.0;
+static SEQUENTIAL_FROM_START_COEF: f64 = 4.0;
 
 #[derive(Clone)]
 pub struct Ant {
@@ -25,9 +27,9 @@ pub struct Ant {
     corresponding_crp: Vec<[usize; 2]>,
     parameters: AcoParameters,
     //teachers_times[teacher_id][period] = [room_id, room_id, ...]gg
-    teachers_times: Vec<HashMap<usize, Vec<usize>>>,
+    work_periods_each_teachers: Vec<BTreeMap<usize, Vec<usize>>>,
     //teachers_times[teacher_id][period] = [room_id, room_id, ...]
-    students_times: Vec<HashMap<usize, Vec<usize>>>,
+    work_periods_each_students: Vec<BTreeMap<usize, Vec<usize>>>,
 }
 
 impl Ant {
@@ -37,15 +39,15 @@ impl Ant {
             vec![vec![false; parameters.num_of_periods as usize]; parameters.num_of_rooms as usize];
         let corresponding_crp = vec![[0, 0]; parameters.num_of_classes as usize];
         let parameters = parameters;
-        let teachers_times = vec![HashMap::new(); parameters.num_of_teachers as usize];
-        let students_times = vec![HashMap::new(); parameters.num_of_students as usize];
+        let teachers_times = vec![BTreeMap::new(); parameters.num_of_teachers as usize];
+        let students_times = vec![BTreeMap::new(); parameters.num_of_students as usize];
         return Ant {
             visited_classes,
             visited_roomperiods,
             corresponding_crp,
             parameters,
-            teachers_times,
-            students_times,
+            work_periods_each_teachers: teachers_times,
+            work_periods_each_students: students_times,
         };
     }
 
@@ -68,7 +70,10 @@ impl Ant {
             .get_teacher_indexes()
             .iter()
         {
-            if let Some(times) = self.teachers_times.get_mut(*teacher_index as usize) {
+            if let Some(times) = self
+                .work_periods_each_teachers
+                .get_mut(*teacher_index as usize)
+            {
                 for i in 0..serial_size {
                     if let Some(time) = times.get_mut(&(period_index + i)) {
                         time.push(room_index);
@@ -84,7 +89,10 @@ impl Ant {
             .get_students_group_indexes()
             .iter()
         {
-            if let Some(times) = self.students_times.get_mut(*student_index as usize) {
+            if let Some(times) = self
+                .work_periods_each_students
+                .get_mut(*student_index as usize)
+            {
                 for i in 0..serial_size {
                     if let Some(time) = times.get_mut(&(period_index + i)) {
                         time.push(room_index);
@@ -98,8 +106,10 @@ impl Ant {
 
     pub fn construct_path(&mut self, graph: &Graph) {
         let shuffled_array = Ant::get_shuffled_array(self.parameters.num_of_classes);
-        self.teachers_times = vec![HashMap::new(); self.parameters.num_of_teachers as usize];
-        self.students_times = vec![HashMap::new(); self.parameters.num_of_students as usize];
+        self.work_periods_each_teachers =
+            vec![BTreeMap::new(); self.parameters.num_of_teachers as usize];
+        self.work_periods_each_students =
+            vec![BTreeMap::new(); self.parameters.num_of_students as usize];
         //preallocate locked classes
         for v in shuffled_array.iter() {
             if let Some(to) = graph.get_classes_is_locked(*v) {
@@ -123,9 +133,40 @@ impl Ant {
         }
     }
 
+    fn calc_all_path_length_each_frame(&self) -> Vec<Vec<f64>> {
+        let mut length =
+            vec![
+                vec![1.0; self.parameters.num_of_periods / self.parameters.size_of_frame];
+                self.parameters.num_of_rooms
+            ];
+        for r in 0..self.parameters.num_of_rooms as usize {
+            for f in 0..self.parameters.num_of_periods / self.parameters.size_of_frame {
+                let mut is_empty = true;
+                let mut count_in_frame = 0;
+                for p in f * self.parameters.size_of_frame..(f + 1) * self.parameters.size_of_frame
+                {
+                    if !self.visited_roomperiods[r][p] {
+                    } else {
+                        count_in_frame += 1;
+                        is_empty = false;
+                    }
+                }
+                if count_in_frame != self.parameters.size_of_frame {
+                    length[r][f] +=
+                        ((self.parameters.size_of_frame - count_in_frame) as f64) * COLLECTION_COEF;
+                }
+                if is_empty {
+                    length[r][f] = 1.0;
+                }
+            }
+        }
+        length
+    }
+
     pub fn update_next_pheromone(&mut self, graph: &mut Graph) {
-        let length_period = self.calc_all_path_length_par_period(graph);
-        let length_room = self.calc_all_path_length_par_room(graph);
+        let length_period = self.calc_all_path_length_each_period(graph);
+        let length_room = self.calc_all_path_length_each_room(graph);
+        let length_frame = self.calc_all_path_length_each_frame();
         for i in 0..self.corresponding_crp.len() {
             let [room, period] = self.corresponding_crp[i];
             let q = self.parameters.q;
@@ -133,13 +174,17 @@ impl Ant {
                 i,
                 room,
                 period,
-                q / (length_period[period] + length_room[room] - 1.0),
+                q / (length_period[period]
+                    + length_room[room]
+                    + length_frame[room][period / self.parameters.size_of_frame]
+                    - 1.0
+                    - 1.0),
             );
         }
     }
 
     // capacity ,students and teachers
-    fn calc_all_path_length_par_period(&self, graph: &Graph) -> Vec<f64> {
+    fn calc_all_path_length_each_period(&self, graph: &Graph) -> Vec<f64> {
         let mut length = vec![1.0; self.parameters.num_of_periods as usize];
         for class_id in 0..self.corresponding_crp.len() {
             let [room, period] = self.corresponding_crp[class_id];
@@ -149,13 +194,13 @@ impl Ant {
                 length[period] += CAP_COEF;
             }
         }
-        for mp in self.students_times.iter() {
+        for mp in self.work_periods_each_students.iter() {
             for (period, v) in mp.iter() {
                 let ftime = (*v).len() as f64;
                 length[*period] += (ftime * (ftime - 1.0) / 2.0 as f64) * STUDENT_COEF;
             }
         }
-        for mp in self.teachers_times.iter() {
+        for mp in self.work_periods_each_teachers.iter() {
             for (period, v) in mp.iter() {
                 let ftime = (*v).len() as f64;
                 length[*period] += (ftime * (ftime - 1.0) / 2.0 as f64) * TEACHER_COEF;
@@ -167,15 +212,15 @@ impl Ant {
                 &graph.get_class_ref(class_id).get_teacher_indexes(),
                 graph.get_teachers_ref(),
             );
-            if(absent_days.contains(&period)){
+            if (absent_days.contains(&period)) {
                 length[period] += ABSENT_DAYS_COEF;
             }
-       }
+        }
         length
     }
 
     // straddle days
-    fn calc_all_path_length_par_room(&self, graph: &Graph) -> Vec<f64> {
+    fn calc_all_path_length_each_room(&self, graph: &Graph) -> Vec<f64> {
         let mut length = vec![1.0; self.parameters.num_of_rooms as usize];
         for class_id in 0..self.corresponding_crp.len() {
             let [room, period] = self.corresponding_crp[class_id];
@@ -191,13 +236,19 @@ impl Ant {
 
     pub fn calc_all_path_length(&self, graph: &Graph) -> f64 {
         let mut length = 1.0;
-        let length_period = self.calc_all_path_length_par_period(graph);
-        let length_room = self.calc_all_path_length_par_room(graph);
+        let length_period = self.calc_all_path_length_each_period(graph);
+        let length_room = self.calc_all_path_length_each_room(graph);
+        let length_frame = self.calc_all_path_length_each_frame();
         for p in &length_period {
             length += p - 1.0;
         }
         for r in &length_room {
             length += r - 1.0;
+        }
+        for p in &length_frame {
+            for f in p {
+                length += f - 1.0;
+            }
         }
 
         length
@@ -221,8 +272,12 @@ impl Ant {
         }
         res
     }
-    
-    fn calc_absent_days(&self,teacher_indices:&Vec<usize>,teachers:&Vec<Teacher>)->BTreeSet<usize>{
+
+    fn calc_absent_days(
+        &self,
+        teacher_indices: &Vec<usize>,
+        teachers: &Vec<Teacher>,
+    ) -> BTreeSet<usize> {
         let mut res = BTreeSet::new();
         for teacher_id in teacher_indices.iter() {
             res.extend(teachers[*teacher_id].absent_days.clone());
@@ -231,32 +286,36 @@ impl Ant {
     }
 
     fn calc_prob_from_v(&self, v: usize, graph: &Graph) -> (Vec<[usize; 2]>, Vec<f64>) {
-        let mut sum_pheromone = 0.0;
+        let mut sum_value = 0.0;
         let mut to_vertexes = Vec::new();
-        let mut to_pheromones = Vec::new();
+        let mut pre_normalized_values = Vec::new();
         let alpha = self.parameters.alpha;
         let beta = self.parameters.beta;
-        let serial_size = graph.get_class(v).serial_size;
+        let class_period_length = graph.get_class(v).serial_size;
 
-        for [room, period] in self.calc_allocatable_room_periods(serial_size, graph) {
-            let pre_pheromone = graph.get_pheromone(v, room, period);
-            
+        for [room, period] in self.calc_allocatable_room_periods(class_period_length, graph) {
+            let pheromone = graph.get_pheromone(v, room, period);
+
             let heuristics = self.parameters.q
                 / self.calc_edge_length(
-                    graph.get_room_ref(room).get_capacity(),
+                    graph.get_room_ref(room),
                     graph.get_class_ref(v),
-                    &self.calc_absent_days(&graph.get_class_ref(v).get_teacher_indexes(),graph.get_teachers_ref()),
+                    &self.calc_absent_days(
+                        &graph.get_class_ref(v).get_teacher_indexes(),
+                        graph.get_teachers_ref(),
+                    ),
                     period as usize,
+                    self.parameters.size_of_frame,
                 );
-            let pheromone = pre_pheromone.powf(alpha) * heuristics.powf(beta);
+            let pre_normalized_value = pheromone.powf(alpha) * heuristics.powf(beta);
             if v == 0 {}
-            sum_pheromone += pheromone;
+            sum_value += pre_normalized_value;
             to_vertexes.push([room, period]);
-            to_pheromones.push(pheromone);
+            pre_normalized_values.push(pre_normalized_value);
         }
-        let mut to_prob = to_pheromones
+        let mut to_prob = pre_normalized_values
             .iter()
-            .map(|x| x / sum_pheromone)
+            .map(|x| x / sum_value)
             .collect::<Vec<f64>>();
         for i in 1..to_prob.len() {
             to_prob[i] += to_prob[i - 1];
@@ -280,10 +339,14 @@ impl Ant {
                 let pre_pheromone = graph.get_pheromone(v, room, period);
                 let heuristics = self.parameters.q
                     / self.calc_edge_length(
-                        graph.get_room_ref(room).get_capacity(),
+                        graph.get_room_ref(room),
                         graph.get_class_ref(v),
-                        &self.calc_absent_days(&graph.get_class_ref(v).get_teacher_indexes(),graph.get_teachers_ref()),
+                        &self.calc_absent_days(
+                            &graph.get_class_ref(v).get_teacher_indexes(),
+                            graph.get_teachers_ref(),
+                        ),
                         period as usize,
+                        self.parameters.size_of_frame,
                     );
                 let pheromone = pre_pheromone.powf(alpha) * heuristics.powf(beta);
                 if v == 0 {}
@@ -299,15 +362,22 @@ impl Ant {
         (to_vertexes, to_prob)
     }
 
-    fn calc_edge_length(&self, room_capacity: usize, class: &Class, absent_days: &BTreeSet<usize>,period: usize) -> f64 {
+    fn calc_edge_length(
+        &self,
+        room: &Room,
+        class: &Class,
+        absent_days: &BTreeSet<usize>,
+        period: usize,
+        size_of_frame: usize,
+    ) -> f64 {
         let mut edge_length = 1.0;
         //capacity violation
-        if class.get_num_of_students() > room_capacity {
+        if class.get_num_of_students() > room.get_capacity() {
             edge_length += CAP_COEF;
         }
         //students violation
         for id in class.get_students_group_indexes().iter() {
-            if let Some(times) = self.students_times.get(*id as usize) {
+            if let Some(times) = self.work_periods_each_students.get(*id as usize) {
                 if let Some(time) = times.get(&(period as usize)) {
                     let ftime = (*time).len() as f64;
                     edge_length += (ftime * (ftime - 1.0) / 2.0 as f64) * STUDENT_COEF;
@@ -316,7 +386,7 @@ impl Ant {
         }
         //teachers violation
         for id in class.get_teacher_indexes().iter() {
-            if let Some(times) = self.teachers_times.get(*id as usize) {
+            if let Some(times) = self.work_periods_each_teachers.get(*id as usize) {
                 if let Some(time) = times.get(&(period as usize)) {
                     let ftime = (*time).len() as f64;
                     edge_length += (ftime * (ftime - 1.0) / 2.0 as f64) * TEACHER_COEF;
@@ -329,8 +399,23 @@ impl Ant {
         }
         //straddle days violation
         if (period % self.parameters.num_of_day_lengths) + class.serial_size
-            > self.parameters.num_of_day_lengths{
+            > self.parameters.num_of_day_lengths
+        {
             edge_length += STRADDLE_DAYS_COEF;
+        }
+        //collection violation
+        {
+            let start_frame = period / size_of_frame * size_of_frame;
+            let mut count_in_frame = 0;
+            for p in start_frame..(start_frame + size_of_frame) {
+                if self.visited_roomperiods[room.index][p] {
+                    count_in_frame += 1;
+                }
+            }
+            edge_length += (size_of_frame - count_in_frame) as f64 * COLLECTION_COEF;
+            if count_in_frame == 0 {
+                edge_length += (size_of_frame) as f64 * COLLECTION_COEF;
+            }
         }
         edge_length
     }
@@ -360,7 +445,7 @@ impl Ant {
 
     pub fn get_same_teacher_violations(&self) -> Vec<Violations> {
         let mut res = Vec::new();
-        for (_, mp) in (&self.teachers_times).iter().enumerate() {
+        for (_, mp) in (&self.work_periods_each_teachers).iter().enumerate() {
             for (period_id, time) in mp {
                 if time.len() > 1 {
                     let violations = Violations::new(*period_id as usize, time.clone());
@@ -372,7 +457,7 @@ impl Ant {
     }
     pub fn get_same_students_group_violations(&self) -> Vec<Violations> {
         let mut res = Vec::new();
-        for (_, mp) in (&self.students_times).iter().enumerate() {
+        for (_, mp) in (&self.work_periods_each_students).iter().enumerate() {
             for (period_id, time) in mp {
                 if time.len() > 1 {
                     let violations = Violations::new(*period_id as usize, time.clone());

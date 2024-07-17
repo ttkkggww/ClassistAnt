@@ -1,6 +1,6 @@
+use super::super::aco::violations::CellsViolation;
 use serde::{Deserialize, Serialize};
 use std::convert::AsMut;
-use super::super::aco::violations::CellsViolation;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
