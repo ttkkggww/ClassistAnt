@@ -1,6 +1,6 @@
 const TEACHERS_CSV_PATH: &str = "./csvdata/teachers.csv";
 const STUDENT_GROUPS_CSV_PATH: &str = "./csvdata/student_groups.csv";
-const CLASSES_CSV_PATH: &str = "./csvdata/classes.csv";
+const CLASSES_CSV_PATH: &str = "./csvdata/themed_research.csv";
 const ROOMS_CSV_PATH: &str = "./csvdata/rooms.csv";
 use std::error::Error;
 mod class;

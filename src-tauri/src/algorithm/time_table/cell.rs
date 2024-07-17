@@ -1,6 +1,6 @@
+use super::super::aco::violations::CellsViolation;
 use serde::{Deserialize, Serialize};
 use std::convert::AsMut;
-use super::super::aco::violations::CellsViolation;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -9,6 +9,14 @@ pub enum Cell {
     BlankCell(BlankCell),
 }
 
+impl Cell {
+    pub fn get_size(&self) -> Option<usize> {
+        match self {
+            Cell::ActiveCell(active_cell) => active_cell.size,
+            Cell::BlankCell(blank_cell) => Some(1),
+        }
+    }
+}
 impl AsMut<Cell> for Cell {
     fn as_mut(&mut self) -> &mut Cell {
         return self;
@@ -38,6 +46,5 @@ pub struct BlankCell {
     pub id: usize,
     pub period: usize,
     pub room: usize,
-    pub is_visible: bool,
-    pub size: Option<usize>,
+    pub color: Option<String>,
 }

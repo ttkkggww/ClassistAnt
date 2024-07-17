@@ -7,7 +7,6 @@ import { RoomIndex } from "./RoomIndex/RoomIndex";
 import { Period } from "./Period/Period";
 import { DndContext, MouseSensor, PointerSensor, useSensors } from "@dnd-kit/core";
 import { useSensor } from "@dnd-kit/core";
-let startX:number,startY: number;
 
 interface Violations {
   period: number;
@@ -15,7 +14,7 @@ interface Violations {
 }
 
 interface cellsViolations {
-  is_violated: boolean;
+  isViolated: boolean;
   sameStudentSameTime: Violations[];
   sameTeacherSameTime: Violations[];
   capacityOver: Violations[];
@@ -57,13 +56,10 @@ class BlankCell {
   size?: number;
 }
 
-function isActiveCell(cell: Cell): cell is { activeCell: ActiveCell } {
-  return (cell as { activeCell: ActiveCell }).activeCell !== undefined;
-}
-
-type Cell = { activeCell: ActiveCell } | { blankCell: BlankCell };
 export interface TimeTable {
-  cells: Array<Cell>;
+  classList : (ActiveCell| null)[],
+  roomSize: number,
+  periodSize: number
 }
 
 
@@ -76,13 +72,9 @@ interface GridProps {
   periods: string[];
 }
 
-const distance = (x1: number, y1: number, x2: number, y2: number) => {
-  return Math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2);
-}
-
-const GridComponent: React.FC<GridProps> = ({ timeTable, setTimeTable ,rooms,periods}) => {
-  const { cells } = timeTable;
-
+const Grid: React.FC<GridProps> = ({ timeTable, setTimeTable ,rooms,periods}) => {
+  console.log(timeTable)
+  const { classList } = timeTable;
   const sensor = useSensor(PointerSensor, {
     activationConstraint: {
       distance: 5,
@@ -92,11 +84,6 @@ const GridComponent: React.FC<GridProps> = ({ timeTable, setTimeTable ,rooms,per
   const handleDragEnd = (event: any) => {
     const { over, active } = event;
     if (over == null) {
-      return;
-    }
-    let endX = event.activatorEvent.clientX;
-    let endY = event.activatorEvent.clientY;
-    if(distance(startX,startY,endX,endY) < 5){
       return;
     }
     let is_swappable;
@@ -133,44 +120,77 @@ const GridComponent: React.FC<GridProps> = ({ timeTable, setTimeTable ,rooms,per
       console.log(err);
     });
   }
-  
-  console.log('a');
 
   return (
     <div style={{ width: "100%" }}>
       <div className={styles["grid-container"]} style={{}}>
       <DndContext onDragEnd={handleDragEnd} onDragOver={handleDragOver} sensors={sensors}>
-          {cells.map((cell, index) => {
-            if (isActiveCell(cell)) {
-              let cellData = cell.activeCell;
+          {
+            classList.map((cell, index) => {
+              if (cell!=null) {
+                let tipMessage = "";
+                if (cell.violations) {
+                  if (cell.violations.isViolated) {
+                    tipMessage = "This cell has some violations";
+                    console.log(cell.violations)
+                    if (cell.violations.sameStudentSameTime.length > 0) {
+                      tipMessage += "\nSame student in different rooms at the same time";
+                      tipMessage += cell.violations.sameStudentSameTime.map((violation) => {
+                        return "\nPeriod: " + violation.period + " Rooms: " + violation.rooms.join(",");
+                      });
+                    }
+                    if (cell.violations.sameTeacherSameTime.length > 0) {
+                      tipMessage += "\nSame teacher in different rooms at the same time";
+                      tipMessage += cell.violations.sameTeacherSameTime.map((violation) => {
+                        return "\nPeriod: " + violation.period + " Rooms: " + violation.rooms.join(",");
+                      });
+                    }
+                    if (cell.violations.capacityOver.length > 0) {
+                      tipMessage += "\nCapacity is over in some rooms";
+                      tipMessage += cell.violations.capacityOver.map((violation) => {
+                        return "\nPeriod: " + violation.period + " Rooms: " + violation.rooms.join(",");
+                      });
+                    }
+                    if (cell.violations.strabbleDays.length > 0) {
+                      tipMessage += "\nSame class in different days";
+                      tipMessage += cell.violations.strabbleDays.map((violation) => {
+                        return "\nPeriod: " + violation.period + " Rooms: " + violation.rooms.join(",");
+                      });
+                    }
+                  }
+                }
+                return (
+                  <Draggable 
+                    hex_color={cell.color?cell.color:"#ffffff"}
+                    text={cell.className + cell.teachers?.join(",") }
+                    id={cell.id} 
+                    styles={styles["grid-cell"]}
+                    room={cell.room}
+                    period={cell.period}
+                    grid_size={cell.size!}
+                    setTimeTable={setTimeTable}
+                    isViolated={cell.violations?.isViolated!}
+                    toolTipMessage={tipMessage}
+                  />
+                );
+              }
+            })
+          }
+          {
+            Array(timeTable.roomSize*timeTable.periodSize).fill(0).map((_,index)=>{
               return (
-                <Draggable
-                  key = {index}
-                  hex_color={cellData.color ?? "#ffffff"}
-                  text={cellData.className}
-                  id={cellData.id}
-                  classId={cellData.id}
+                <Droppable
+                  id={index}
                   styles={styles["grid-cell"]}
-                  room={cellData.room}
-                  period={cellData.period}
-                  grid_size={cellData.size ?? 1}
-                  setTimeTable={setTimeTable}
-                  isViolated={cellData.violations?.is_violated ?? false}
-                  toolTipMessage={cellData.toolTipMessage}
+                  room={Math.floor(index / timeTable.periodSize)}
+                  period={index % timeTable.periodSize}
+                  grid_size={1}
+                  overColor={overColor}
                 />
-              );
-            }else {
-              let cellData = cell.blankCell;
-              return <Droppable key={index} 
-              id={cellData.id} 
-              styles={styles["grid-cell"]} 
-              room={cellData.room}
-              period={cellData.period}
-              grid_size={cellData.size??1} 
-              overColor={overColor}/>;
-
-            }
-          })}
+              )
+            })
+          }
+          
       </DndContext>
       {rooms.map((room,index)=>{
         return <RoomIndex key={index} id={index} name={room} styles={styles["grid-cell"]}/>
@@ -183,4 +203,4 @@ const GridComponent: React.FC<GridProps> = ({ timeTable, setTimeTable ,rooms,per
   );
 };
 
-export default GridComponent;
+export default Grid;

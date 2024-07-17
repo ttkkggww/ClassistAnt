@@ -1,14 +1,14 @@
 use serde::{Deserialize, Serialize};
 
-use std::error::Error;
-use std::sync::Mutex;
 use self::{student_group::StudentGroup, teacher::Teacher};
+use std::sync::Mutex;
+use std::{error::Error, vec};
 
 pub mod class;
 mod column;
 pub mod room;
 mod student_group;
-mod teacher;
+pub mod teacher;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Input {
@@ -18,10 +18,10 @@ pub struct Input {
     teachers: Vec<teacher::Teacher>,
 }
 
-const TEACHERS_CSV_PATH: &str = "./csvdata/teachers.csv";
-const STUDENT_GROUPS_CSV_PATH: &str = "./csvdata/student_groups.csv";
-const CLASSES_CSV_PATH: &str = "./csvdata/classes.csv";
-const ROOMS_CSV_PATH: &str = "./csvdata/rooms.csv";
+const TEACHERS_CSV_PATH: &str = "./csvdata/themed_research/teachers.csv";
+const STUDENT_GROUPS_CSV_PATH: &str = "./csvdata/themed_research/student_groups.csv";
+const CLASSES_CSV_PATH: &str = "./csvdata/themed_research/classes.csv";
+const ROOMS_CSV_PATH: &str = "./csvdata/themed_research/rooms.csv";
 
 impl Input {
     pub fn new() -> Input {
@@ -53,8 +53,22 @@ impl Input {
             let record = result?;
             let id = record[0].parse::<usize>().unwrap();
             let name = record[1].to_string();
+            println!("{:?}", record[2].to_string());
+            let absent_days = if record[2].is_empty() {
+                vec![]
+            } else {
+                record[2]
+                    .split(",")
+                    .map(|x| x.parse::<usize>().unwrap())
+                    .collect()
+            };
             let index = index as usize;
-            teachers.push(teacher::Teacher { id, index, name });
+            teachers.push(teacher::Teacher {
+                id,
+                index,
+                name,
+                absent_days,
+            });
         }
 
         Ok(teachers)
@@ -116,10 +130,13 @@ impl Input {
             let name = record[1].to_string();
             let mut teacher_indexes = Vec::new();
             for i in record[2].split(",") {
+                if i == "" {
+                    continue;
+                }
                 if let Some(add) = teachers.iter().position(|x| x.name == i) {
                     teacher_indexes.push(add as usize);
                 } else {
-                    panic!("teacher not found");
+                    panic!("teacher not found {}", i);
                 }
             }
             let mut room_candidates_indexes = Vec::new();
@@ -169,7 +186,7 @@ impl Input {
 }
 
 pub struct InputManager {
-    pub input:Mutex<Option<Input>>,
+    pub input: Mutex<Option<Input>>,
 }
 
 #[tauri::command]
@@ -182,7 +199,9 @@ pub fn handle_set_input(input_manager: tauri::State<'_, InputManager>) -> Result
 }
 
 #[tauri::command]
-pub fn handle_get_rooms(input_manager: tauri::State<'_, InputManager>) -> Result<Vec<String>, String> {
+pub fn handle_get_rooms(
+    input_manager: tauri::State<'_, InputManager>,
+) -> Result<Vec<String>, String> {
     let input = input_manager.input.lock().unwrap();
     if let Some(input) = input.as_ref() {
         return Ok(input.get_rooms().iter().map(|x| x.name.clone()).collect());

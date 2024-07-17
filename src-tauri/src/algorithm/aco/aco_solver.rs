@@ -4,7 +4,10 @@ use super::ant::Ant;
 use super::colony::Colony;
 use super::graph::Graph;
 use super::violations::Violations;
-use crate::input::{class, Input};
+use crate::{
+    algorithm::time_table::cell::ActiveCell,
+    input::{class, Input},
+};
 use std::sync::Mutex;
 use tauri::Manager;
 
@@ -34,7 +37,8 @@ impl ACOSolver {
             self.parameters.num_of_rooms as usize
         ];
         if let Some(ant) = &self.best_ant {
-            for (class_id, &[room_id, period_id]) in ant.get_corresponding_crp().iter().enumerate() {
+            for (class_id, &[room_id, period_id]) in ant.get_corresponding_crp().iter().enumerate()
+            {
                 for i in 0..self.input.get_classes()[class_id].serial_size {
                     res[room_id as usize][period_id as usize + i as usize] = class_id;
                 }
@@ -101,10 +105,12 @@ impl ACOSolver {
             } else {
                 self.super_ant = Some(best_ant.clone());
             }
+            /*
             println!(
                 "best path length: {}",
                 best_ant.calc_all_path_length(self.colony.get_graph())
             );
+            */
         }
         if self.cnt_super_not_change > self.parameters.super_not_change {
             println!("reset pheromone!");
@@ -228,7 +234,7 @@ pub fn handle_one_hot_pheromone(
 #[tauri::command]
 pub fn handle_read_cells(
     solver_manager: tauri::State<'_, ACOSolverManager>,
-    cells: Vec<Cell>,
+    cells: Vec<Option<ActiveCell>>,
 ) -> Result<(), String> {
     let mut managed_solver = solver_manager.solver.lock().unwrap();
     if let Some(solver) = managed_solver.as_mut() {
