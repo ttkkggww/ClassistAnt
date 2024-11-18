@@ -48,7 +48,6 @@ const TableEditor: React.FC<TableEditorProps> = (props: TableEditorProps) => {
         console.log(err, props.tableName);
       });
   }, []);
-  // テーブルに表示する列の定義（CSVの１行目から作成）
   return (
     <div className={styles.field}>
       <div style={{ height: "100vh", overflow: "scroll" }}>

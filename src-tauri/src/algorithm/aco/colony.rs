@@ -1,8 +1,8 @@
 use super::aco_parameters::AcoParameters;
 use super::ant::Ant;
 use super::graph::Graph;
-
-#[derive(Clone)]
+use serde::{Deserialize, Serialize};
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Colony {
     parameters: AcoParameters,
     graph: Graph,

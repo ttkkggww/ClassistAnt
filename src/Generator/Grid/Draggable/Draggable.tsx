@@ -32,14 +32,14 @@ export function Draggable({ hex_color, text, id, styles,room,period,grid_size,se
         gridColumn: `span ${grid_size}`,
         gridArea: `${y}/${x}/${y+grid_size}/${x+1}`,
         zIndex: 3,
-        border : isViolated ? '2px solid blue' : '',
+        border : isViolated ? '2px solid red' : '',
       }
     : {
         backgroundColor: hex_color,
         gridColumn: `span ${grid_size}`,
         gridArea: `${y}/${x}/${y+grid_size}/${x+1}`,
         zIndex: 2,
-        border : isViolated ? '2px solid blue' : '',
+        border : isViolated ? '2px solid red' : '',
     };
 
   const handleDobuleClick = () => {

@@ -11,8 +11,9 @@ use rand::seq::SliceRandom;
 use std::collections::HashMap;
 use std::collections::{BTreeMap, BTreeSet};
 use std::vec;
+use serde::{Deserialize, Serialize};
 
-static CAP_COEF: f64 = 2.0;
+static CAP_COEF: f64 = 5.0;
 static TEACHER_COEF: f64 = 5.0;
 static STUDENT_COEF: f64 = 3.0;
 static ABSENT_DAYS_COEF: f64 = 3.0;
@@ -20,7 +21,7 @@ static STRADDLE_DAYS_COEF: f64 = 1.0;
 static COLLECTION_COEF: f64 = 1.0;
 static SEQUENTIAL_FROM_START_COEF: f64 = 4.0;
 
-#[derive(Clone)]
+#[derive(Deserialize,Serialize,Clone)]
 pub struct Ant {
     visited_classes: Vec<bool>,
     visited_roomperiods: Vec<Vec<bool>>,

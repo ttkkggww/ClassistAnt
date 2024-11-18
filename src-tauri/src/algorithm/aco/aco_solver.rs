@@ -10,8 +10,10 @@ use crate::{
 };
 use std::sync::Mutex;
 use tauri::Manager;
+use serde::{Deserialize, Serialize};
+use log::info;
 
-#[derive(Clone)]
+#[derive(Serialize,Deserialize,Clone)]
 pub struct ACOSolver {
     pub parameters: AcoParameters,
     pub colony: Colony,
@@ -220,7 +222,7 @@ pub fn handle_one_hot_pheromone(
     room_id: usize,
     period_id: usize,
 ) -> Result<(), String> {
-    println!(
+    info!(
         "called handle_one_hot_pheromone {} {} {}",
         class_id, room_id, period_id
     );
@@ -236,6 +238,7 @@ pub fn handle_read_cells(
     solver_manager: tauri::State<'_, ACOSolverManager>,
     cells: Vec<Option<ActiveCell>>,
 ) -> Result<(), String> {
+    info!("called handle_read_cells");
     let mut managed_solver = solver_manager.solver.lock().unwrap();
     if let Some(solver) = managed_solver.as_mut() {
         solver.colony.get_graph_as_mut().load_cells(&cells);

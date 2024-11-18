@@ -2,7 +2,7 @@
 
 .grid-container {
   display: grid;
-  grid-template-columns: 40px repeat(2,minmax(100px,1fr));
+  grid-template-columns: 60px repeat(19,minmax(120px,1fr));
   grid-template-rows: 40px repeat(25,1fr);
   text-align: center;
 }
@@ -10,6 +10,7 @@
 
 .grid-cell {
   border: 1px solid #ccc;
+  white-space: pre-wrap;
   overflow-y: scroll; /* テキストがはみ出た場合に隠す */
   overflow-x: scroll;
 }

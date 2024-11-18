@@ -6,9 +6,14 @@ use cell::ActiveCell;
 use cell::BlankCell;
 use core::num;
 use core::str;
+use core::time;
 use std::collections::BTreeSet;
 use std::error::Error;
+use std::fs::File;
+use std::io::Read;
+use std::io::Write;
 use std::sync::Mutex;
+use tauri::utils::config;
 
 use super::aco::aco_solver::ACOSolver;
 use super::aco::aco_solver::ACOSolverManager;
@@ -17,6 +22,7 @@ use super::aco::violations::CellsViolation;
 use super::aco::violations::Violations;
 use crate::input::room::Room;
 use serde::{Deserialize, Serialize};
+use log::{error,warn,info,debug};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -80,7 +86,7 @@ impl TimeTable {
             period: period,
             room: room,
             class_index: class.index,
-            class_name: format!("{},{},{}", id, class.index, class.name),
+            class_name: format!("{}", class.name),
             teachers: Some(
                 class
                     .teacher_indexes
@@ -88,7 +94,14 @@ impl TimeTable {
                     .map(|&x| tearchers[x].name.clone())
                     .collect(),
             ),
-            students: None,
+            students: Some(
+                class  
+                    .students_group_indexes
+                    .iter()
+                    .map(|&x| solver.input.get_student_groups()[x].name.clone())
+                    .collect(),
+            ),
+            student_size: Some(class.num_of_students),
             color: color,
             is_locked: is_locked,
             size: Some(class.serial_size),
@@ -134,7 +147,6 @@ impl TimeTable {
     }
 
     pub fn remove_class(&mut self, room: usize, period: usize) {
-        println!("remove class:{},{}", room, period);
         let serial_size = self.process_table[room][period]
             .as_ref()
             .unwrap()
@@ -208,7 +220,6 @@ impl TimeTable {
                 }
             }
         }
-        self.debug_process_table();
     }
 
     pub fn calc_same_student_same_time(&self, room_id: usize, period_id: usize) -> Vec<Violations> {
@@ -397,6 +408,7 @@ impl TimeTable {
                                 .collect(),
                         ),
                         students: None,
+                        student_size: Some(class.num_of_students),
                         color: None, //ここsolverから取得する
                         is_locked: Some(is_locked_list[class.index]),
                         size: Some(class.serial_size),
@@ -456,6 +468,15 @@ pub fn save_timetable(timetable_manager: tauri::State<'_, TimeTableManager>, tim
     *managed_timetable = Some(timetable);
 }
 
+pub fn save_solver(
+    solver_manager: tauri::State<'_, ACOSolverManager>,
+    solver: ACOSolver,
+) -> Result<(), Box<dyn Error>> {
+    let mut managed_solver = solver_manager.solver.lock().unwrap();
+    *managed_solver = Some(solver);
+    Ok(())
+}
+
 fn calc_color_init(
     solver: &ACOSolver,
     class_id: usize,
@@ -470,6 +491,25 @@ fn calc_color_init(
         }
     }
     return res;
+}
+
+fn calculate_gradient_color(prov: f64, start_color: &str, end_color: &str) -> String {
+    // パースした色の値を取得 (R, G, B)
+    let start_r = u8::from_str_radix(&start_color[1..3], 16).unwrap();
+    let start_g = u8::from_str_radix(&start_color[3..5], 16).unwrap();
+    let start_b = u8::from_str_radix(&start_color[5..7], 16).unwrap();
+
+    let end_r = u8::from_str_radix(&end_color[1..3], 16).unwrap();
+    let end_g = u8::from_str_radix(&end_color[3..5], 16).unwrap();
+    let end_b = u8::from_str_radix(&end_color[5..7], 16).unwrap();
+
+    // 線形補間を使用して各色成分を計算
+    let r = ((1.0 - prov) * start_r as f64 + prov * end_r as f64) as u8;
+    let g = ((1.0 - prov) * start_g as f64 + prov * end_g as f64) as u8;
+    let b = ((1.0 - prov) * start_b as f64 + prov * end_b as f64) as u8;
+
+    // 計算したRGB値から16進数文字列を生成
+    format!("#{:02x}{:02x}{:02x}", r, g, b)
 }
 
 fn get_pheromone_color(
@@ -488,9 +528,7 @@ fn get_pheromone_color(
                 prov = prov_v[i];
             }
         }
-        let color = (255.0 - (prov * 255.0)) as u8;
-        let hex = format!("{:02x}", color);
-        res = format!("#ff{}{}ff", hex, hex);
+        res = calculate_gradient_color(prov, "#FFFFFF", "#5CB85C");
     }
     res
 }
@@ -512,7 +550,7 @@ pub fn is_swappable(
     over_id: usize,
     active_id: usize,
 ) -> Result<bool, String> {
-    println!("called is_swappable,{},{}", over_id, active_id);
+    info!("called is_swappable,{},{}", over_id, active_id);
     let managed_solver = solver_manager.solver.lock().unwrap();
     let parameter = managed_solver
         .as_ref()
@@ -531,9 +569,7 @@ pub fn is_swappable(
         .unwrap()
         .as_ref()
     {
-        time_table.debug_process_table();
-        time_table.debug_class_list();
-        println!(
+        info!(
             "active_id:{},room:{},period:{}",
             active_id - periods_size * rooms_size,
             (active_id - rooms_size * periods_size) / periods_size,
@@ -574,7 +610,7 @@ pub fn handle_swap_cell(
     over_id: usize,
     active_id: usize,
 ) -> Result<TimeTable, String> {
-    println!("called handle_swap_cell,{},{}", over_id, active_id);
+    info!("called handle_swap_cell,{},{}", over_id, active_id);
     let mut managed_timetable = timetable_manager.timetable_manager.lock().unwrap();
     let solver = solver_manager.solver.lock().unwrap();
     if let Some(time_table) = managed_timetable.as_mut() {
@@ -619,7 +655,7 @@ pub fn handle_switch_lock(
     solver_manager: tauri::State<'_, ACOSolverManager>,
     id: usize,
 ) -> Result<TimeTable, String> {
-    println!("called handle_switch_lock,{}", id);
+    info!("called handle_switch_lock,{}", id);
     let mut managed_timetable = timetable_manager.timetable_manager.lock().unwrap();
     let solver = solver_manager.solver.lock().unwrap();
     if let Some(time_table) = managed_timetable.as_mut() {
@@ -645,6 +681,72 @@ pub fn handle_switch_lock(
             time_table.class_list[class_index].as_ref().unwrap(),
         ));
         return Ok(time_table.clone());
+    }
+    return Err("No timetable found".to_string());
+}
+
+const DUMP_PATH: &str = "ClassistAnt";
+const DUMP_TIMETABLE_FILE: &str = "timetable.json";
+const DUMP_SOLVER_FILE: &str = "solver.json";
+use tauri::api::path::config_dir;
+#[tauri::command]
+pub fn dump_timetable(
+    timetable_manager: tauri::State<'_, TimeTableManager>,
+    solver_manager: tauri::State<'_, ACOSolverManager>,
+) {
+    info!("called dump_timetable");
+    let json = serde_json::to_string(
+        timetable_manager
+            .timetable_manager
+            .lock()
+            .unwrap()
+            .as_ref()
+            .unwrap(),
+    )
+    .unwrap();
+    if let Some(mut path) = config_dir() {
+        path.push(DUMP_PATH);
+        std::fs::create_dir_all(&path).unwrap();
+        path.push(DUMP_TIMETABLE_FILE);
+        let mut file = File::create(path).unwrap();
+        file.write_all(json.as_bytes()).unwrap();
+    }
+    let solver_json =
+        serde_json::to_string(solver_manager.solver.lock().unwrap().as_ref().unwrap()).unwrap();
+    if let Some(mut path) = config_dir() {
+        path.push(DUMP_PATH);
+        std::fs::create_dir_all(&path).unwrap();
+        path.push(DUMP_SOLVER_FILE);
+        let mut file = File::create(path).unwrap();
+        file.write_all(solver_json.as_bytes()).unwrap();
+    }
+}
+
+#[tauri::command]
+pub fn load_timetable(
+    timetable_manager: tauri::State<'_, TimeTableManager>,
+    solver_manager: tauri::State<'_, ACOSolverManager>,
+) -> Result<TimeTable, String> {
+    info!("called load_timetable");
+    if let Some(mut path) = config_dir() {
+        path.push(DUMP_PATH);
+        path.push(DUMP_SOLVER_FILE);
+        let mut file = File::open(path).unwrap();
+        let mut json = String::new();
+        file.read_to_string(&mut json).unwrap();
+        let solver: ACOSolver = serde_json::from_str(&json).unwrap();
+        save_solver(solver_manager, solver.clone()).unwrap();
+    }
+    if let Some(mut path) = config_dir() {
+        path.push(DUMP_PATH);
+        std::fs::create_dir_all(&path).unwrap();
+        path.push(DUMP_TIMETABLE_FILE);
+        let mut file = File::open(path).unwrap();
+        let mut json = String::new();
+        file.read_to_string(&mut json).unwrap();
+        let timetable: TimeTable = serde_json::from_str(&json).unwrap();
+        save_timetable(timetable_manager, timetable.clone());
+        return Ok(timetable);
     }
     return Err("No timetable found".to_string());
 }
