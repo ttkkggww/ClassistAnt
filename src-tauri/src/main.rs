@@ -1,7 +1,5 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-
-use std::path;
 use std::sync::Mutex;
 use tauri::Manager;
 mod algorithm;
@@ -13,7 +11,6 @@ use algorithm::aco::aco_solver::ACOSolverManager;
 use algorithm::time_table;
 use input::InputManager;
 use std::time::Instant;
-use tauri::api::path::config_dir;
 use log::info;
 use std::env;
 
@@ -31,15 +28,15 @@ fn handle_adapt_input(
             num_of_ants: 3,
             num_of_classes: input.get_classes().len(),
             num_of_rooms: input.get_rooms().len(),
-            num_of_periods: 5,
+            num_of_periods: 5*5,
             num_of_day_lengths: 5,
             num_of_teachers: input.get_teachers().len(),
             num_of_students: input.get_student_groups().len(),
             size_of_frame: 1,
-            q: 1.0,
+            q: 10.0,
             alpha: 1.0,
             beta: 1.0,
-            rou: 0.3,
+            rou: 0.5,
             max_iterations: 100,
             tau_min: 0.001,
             tau_max: 100000.0,
@@ -88,7 +85,8 @@ fn handle_aco_run_once(
             solver.run_aco_times(1);
             run_cnt += 1;
             if let Some(best_ant) = &solver.best_ant {
-                if best_ant.calc_all_path_length(solver.colony.get_graph()) <= 1.5 {
+                println!("length:{}", best_ant.calc_all_path_length(solver.colony.get_graph()));
+                if best_ant.calc_all_path_length(solver.colony.get_graph()) <= 0.5 {
                     break;
                 }
             }
@@ -134,7 +132,7 @@ fn handle_aco_run_no_violations(
             solver.run_aco_times(1);
             run_cnt += 1;
             if let Some(best_ant) = &solver.best_ant {
-                if best_ant.calc_all_path_length(solver.colony.get_graph()) <= 1.5 {
+                if best_ant.calc_all_path_length(solver.colony.get_graph()) <= 0.5 {
                     break;
                 }
             }
@@ -147,6 +145,31 @@ fn handle_aco_run_no_violations(
     }
     return Err("No ACOSolver".to_string());
 }
+
+#[tauri::command]
+fn handle_calc_performance(
+    input_manager: tauri::State<'_, InputManager>,
+    aco_parameters_manager: tauri::State<'_, AcoParametersManager>,
+    solver_manager: tauri::State<'_, ACOSolverManager>,
+    timetable_manager: tauri::State<'_, time_table::TimeTableManager>,
+) -> Result<(), String> {
+    info!("called handle_calc_paformance");
+    let mut times = Vec::<f64>::new();
+    for i in 0..100 {
+        handle_adapt_input(input_manager.clone(), solver_manager.clone(), aco_parameters_manager.clone());
+        let start = Instant::now();
+        handle_aco_run_no_violations(solver_manager.clone(), timetable_manager.clone());
+        let duration = start.elapsed();
+        times.push(duration.as_secs_f64());
+    }
+    let average = times.iter().sum::<f64>() / times.len() as f64;
+    for(i, time) in times.iter().enumerate() {
+        println!("{}:{}", i, time);
+    }
+    println!("average:{}", average);
+    
+    return Err("No ACOSolver".to_string());
+}
 use algorithm::aco::aco_parameters::handle_get_periods;
 use algorithm::aco::aco_solver::handle_one_hot_pheromone;
 use algorithm::aco::aco_solver::handle_read_cells;
@@ -157,6 +180,8 @@ use time_table::handle_swap_cell;
 use time_table::handle_switch_lock;
 use time_table::is_swappable;
 use time_table::load_timetable;
+use time_table::handle_lock_no_violation;
+use time_table::handle_unlock_violation;
 
 fn main() -> Result<(), Box<dyn Error>> {
     env::set_var("RUST_LOG", "info");
@@ -177,7 +202,10 @@ fn main() -> Result<(), Box<dyn Error>> {
             handle_get_periods,
             handle_get_rooms,
             dump_timetable,
-            load_timetable
+            load_timetable,
+            handle_calc_performance,
+            handle_lock_no_violation,
+            handle_unlock_violation
         ])
         .setup(|app| {
             let input_manager = InputManager {

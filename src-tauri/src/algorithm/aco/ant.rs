@@ -137,7 +137,7 @@ impl Ant {
     fn calc_all_path_length_each_frame(&self) -> Vec<Vec<f64>> {
         let mut length =
             vec![
-                vec![1.0; self.parameters.num_of_periods / self.parameters.size_of_frame];
+                vec![0.0; self.parameters.num_of_periods / self.parameters.size_of_frame];
                 self.parameters.num_of_rooms
             ];
         for r in 0..self.parameters.num_of_rooms as usize {
@@ -157,7 +157,7 @@ impl Ant {
                         ((self.parameters.size_of_frame - count_in_frame) as f64) * COLLECTION_COEF;
                 }
                 if is_empty {
-                    length[r][f] = 1.0;
+                    length[r][f] = 0.0;
                 }
             }
         }
@@ -178,15 +178,14 @@ impl Ant {
                 q / (length_period[period]
                     + length_room[room]
                     + length_frame[room][period / self.parameters.size_of_frame]
-                    - 1.0
-                    - 1.0),
+                    + 1.0),
             );
         }
     }
 
     // capacity ,students and teachers
     fn calc_all_path_length_each_period(&self, graph: &Graph) -> Vec<f64> {
-        let mut length = vec![1.0; self.parameters.num_of_periods as usize];
+        let mut length = vec![0.0; self.parameters.num_of_periods as usize];
         for class_id in 0..self.corresponding_crp.len() {
             let [room, period] = self.corresponding_crp[class_id];
             if graph.get_room_ref(room).get_capacity()
@@ -222,7 +221,7 @@ impl Ant {
 
     // straddle days
     fn calc_all_path_length_each_room(&self, graph: &Graph) -> Vec<f64> {
-        let mut length = vec![1.0; self.parameters.num_of_rooms as usize];
+        let mut length = vec![0.0; self.parameters.num_of_rooms as usize];
         for class_id in 0..self.corresponding_crp.len() {
             let [room, period] = self.corresponding_crp[class_id];
             let serial_size = graph.get_class(class_id).serial_size;
@@ -236,19 +235,19 @@ impl Ant {
     }
 
     pub fn calc_all_path_length(&self, graph: &Graph) -> f64 {
-        let mut length = 1.0;
+        let mut length = 0.0;
         let length_period = self.calc_all_path_length_each_period(graph);
         let length_room = self.calc_all_path_length_each_room(graph);
         let length_frame = self.calc_all_path_length_each_frame();
         for p in &length_period {
-            length += p - 1.0;
+            length += p;
         }
         for r in &length_room {
-            length += r - 1.0;
+            length += r;
         }
         for p in &length_frame {
             for f in p {
-                length += f - 1.0;
+                length += f;
             }
         }
 

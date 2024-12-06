@@ -56,7 +56,7 @@ export function Draggable({ hex_color, text, id, styles,room,period,grid_size,se
       <div ref={setNodeRef} 
         {...listeners} 
         {...attributes}
-        onDoubleClick={handleDobuleClick}
+        onClick={handleDobuleClick}
         style={style} className={styles}
         data-tooltip-id={id.toString()}
         data-tooltip-content={toolTipMessage}

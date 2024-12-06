@@ -4,25 +4,20 @@ pub mod cell;
 use crate::input::class::Class;
 use cell::ActiveCell;
 use cell::BlankCell;
-use core::num;
 use core::str;
-use core::time;
-use std::collections::BTreeSet;
 use std::error::Error;
+use std::result::Result;
 use std::fs::File;
 use std::io::Read;
 use std::io::Write;
 use std::sync::Mutex;
-use tauri::utils::config;
-
 use super::aco::aco_solver::ACOSolver;
 use super::aco::aco_solver::ACOSolverManager;
-use super::aco::violations;
 use super::aco::violations::CellsViolation;
 use super::aco::violations::Violations;
 use crate::input::room::Room;
 use serde::{Deserialize, Serialize};
-use log::{error,warn,info,debug};
+use log::info;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -177,6 +172,8 @@ impl TimeTable {
         self.remove_class(from_room, from_period);
         self.add_class(to_room, to_period, class.clone().unwrap(), color, solver);
         let room_list = solver.input.get_rooms();
+        self.lock(class.as_ref().unwrap().index).unwrap();
+        
         let violations = self.get_new_violations(
             to_room,
             to_period,
@@ -420,6 +417,24 @@ impl TimeTable {
                 }
             }
         }
+    }
+
+    pub fn lock(&mut self, class_index: usize) -> Result<(), String> {
+        self.class_list[class_index].as_mut().unwrap().is_locked = Some(true);
+        self.class_list[class_index].as_mut().unwrap().color = Some(
+            "#AAAAFF".to_string(),
+        );
+        return Ok(());
+    }
+    pub fn unlock(&mut self, class_index: usize,solver: &ACOSolver) -> Result<(), String> {
+        self.class_list[class_index].as_mut().unwrap().is_locked = Some(false);
+        self.class_list[class_index].as_mut().unwrap().color = Some(
+            calc_color_from_cell(
+                &solver,
+                self.class_list[class_index].as_ref().unwrap(),
+            ),
+        );
+        return Ok(());
     }
 }
 
@@ -684,6 +699,48 @@ pub fn handle_switch_lock(
     }
     return Err("No timetable found".to_string());
 }
+
+
+#[tauri::command]
+pub fn handle_lock_no_violation(
+    timetable_manager: tauri::State<'_, TimeTableManager>,
+) -> Result<TimeTable, String> {
+    info!("called handle_rock_allof_violation");
+    let mut managed_timetable = timetable_manager.timetable_manager.lock().unwrap();
+    if let Some(time_table) = managed_timetable.as_mut() {
+        for i in 0..time_table.class_list.len() {
+            if let Some(cell) = &time_table.class_list[i] {
+                if !cell.violations.as_ref().unwrap().is_violated {
+                    time_table.lock(i).unwrap();
+                }
+            }
+        }
+        return Ok(time_table.clone());
+    }
+    return Err("No timetable found".to_string());
+}
+
+#[tauri::command]
+pub fn handle_unlock_violation(
+    timetable_manager: tauri::State<'_, TimeTableManager>,
+    solver_manager: tauri::State<'_, ACOSolverManager>,
+) -> Result<TimeTable, String> {
+    info!("called handle_unlock_violation");
+    let mut managed_timetable = timetable_manager.timetable_manager.lock().unwrap();
+    let solver = solver_manager.solver.lock().unwrap();
+    if let Some(time_table) = managed_timetable.as_mut() {
+        for i in 0..time_table.class_list.len() {
+            if let Some(cell) = &time_table.class_list[i] {
+                if cell.violations.as_ref().unwrap().is_violated {
+                    time_table.unlock(i, solver.as_ref().unwrap()).unwrap();
+                }
+            }
+        }
+        return Ok(time_table.clone());
+    }
+    return Err("No timetable found".to_string());
+}
+
 
 const DUMP_PATH: &str = "ClassistAnt";
 const DUMP_TIMETABLE_FILE: &str = "timetable.json";

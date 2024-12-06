@@ -80,10 +80,38 @@ const Generator: React.FC<GeneratorProps> = ({ tableNames }) => {
         console.log(err);
       });
   };
-
+  const calc_performance = () => {
+    invoke("handle_calc_performance")
+      .then((res) => {
+        console.log(res);
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  }
   const handleShowColor = () => {
     setShowColor(!showColor);
   };
+  
+  const handle_lock_no_violation = () => {
+    invoke<TimeTable>("handle_lock_no_violation")
+      .then((res) => {
+        setTimeTable(res);
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  }
+  
+  const handle_unlock_violation = () => {
+    invoke<TimeTable>("handle_unlock_violation")
+      .then((res) => {
+        setTimeTable(res);
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  }
 
   return (
     <div>
@@ -94,6 +122,9 @@ const Generator: React.FC<GeneratorProps> = ({ tableNames }) => {
       <button onClick={run_no_violation}>成約違反がなくなるまで計算する。</button>
       <button onClick={save_time_table}>save timetable</button>
       <button onClick={load_time_table}>load timetable</button>
+      <button onClick={calc_performance}>calc performance</button>
+      <button onClick={handle_lock_no_violation}>制約違反以外のコマをロック</button>
+      <button onClick={handle_unlock_violation}>制約違反のコマをアンロック</button>
       <label>
         <input
           type="checkbox"
