@@ -33,14 +33,14 @@ fn handle_adapt_input(
             num_of_teachers: input.get_teachers().len(),
             num_of_students: input.get_student_groups().len(),
             size_of_frame: 1,
-            q: 10.0,
+            q: 5.0,
             alpha: 1.0,
-            beta: 1.0,
+            beta: 2.0,
             rou: 0.5,
             max_iterations: 100,
-            tau_min: 0.001,
+            tau_min: 0.0015,
             tau_max: 100000.0,
-            ant_prob_random: 0.0,
+            ant_prob_random: 0.001,
             super_not_change: 10000,
         };
         let solver = Some(algorithm::aco::aco_solver::ACOSolver {
@@ -135,6 +135,7 @@ fn handle_aco_run_no_violations(
                 if best_ant.calc_all_path_length(solver.colony.get_graph()) <= 0.5 {
                     break;
                 }
+            println!("length:{}", best_ant.calc_all_path_length(solver.colony.get_graph()));
             }
         }
         let duaration = start.elapsed();
@@ -155,7 +156,7 @@ fn handle_calc_performance(
 ) -> Result<(), String> {
     info!("called handle_calc_paformance");
     let mut times = Vec::<f64>::new();
-    for i in 0..100 {
+    for _ in 0..100 {
         handle_adapt_input(input_manager.clone(), solver_manager.clone(), aco_parameters_manager.clone());
         let start = Instant::now();
         handle_aco_run_no_violations(solver_manager.clone(), timetable_manager.clone());

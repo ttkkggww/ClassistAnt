@@ -2,8 +2,8 @@
 
 .grid-container {
   display: grid;
-  grid-template-columns: 60px repeat(19,minmax(120px,1fr));
-  grid-template-rows: 40px repeat(25,1fr);
+  grid-template-columns: 60px repeat(20,minmax(180px,1fr));
+  grid-template-rows: 50px repeat(25,minmax(100,1fr));
   text-align: center;
 }
 

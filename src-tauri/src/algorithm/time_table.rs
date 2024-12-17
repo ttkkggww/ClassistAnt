@@ -1,11 +1,13 @@
 //変換を作る
 pub mod cell;
 
+use crate::input::class;
 use crate::input::class::Class;
 use cell::ActiveCell;
 use cell::BlankCell;
 use core::str;
 use std::error::Error;
+use std::os::unix::raw::time_t;
 use std::result::Result;
 use std::fs::File;
 use std::io::Read;
@@ -102,6 +104,7 @@ impl TimeTable {
             size: Some(class.serial_size),
             violations: None,
             tool_tip_message: "".to_string(),
+            is_worst_3: None,
         });
     }
 
@@ -411,10 +414,43 @@ impl TimeTable {
                         size: Some(class.serial_size),
                         violations: None,
                         tool_tip_message: "".to_string(),
+                        is_worst_3: None,
                     });
                 } else {
                     self.class_list.push(None);
                 }
+            }
+        }
+    }
+    
+    pub fn update_worst3_cell(&mut self, solver: &ACOSolver) {
+        //calc_prob_from_v_igunore_visitedが下から3番目までのclass_listのworst3をtrueにする
+        let mut prob_tuple = Vec::<(f64, usize)>::new();
+        for i in 0..self.class_list.len() {
+            if let Some(cell) = &self.class_list[i] {
+                if let Some(ant) = solver.get_best_ant() {
+                    let (rp_v, prov_v) =
+                        ant.calc_prob_from_v_igunore_visited(cell.class_index, solver.colony.get_graph());
+                    let mut prov = 0.0;
+                    for (i, rp) in rp_v.iter().enumerate() {
+                        if rp[0] == cell.room && rp[1] == cell.period {
+                            prov = prov_v[i];
+                        }
+                    }
+                    prob_tuple.push((prov, i));
+                }
+            }
+        }
+        prob_tuple.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+        for i in self.class_list.iter_mut() {
+            if let Some(cell) = i {
+                cell.is_worst_3 = Some(false);
+            }
+        }
+        //3番目までをtrueにする
+        for i in 0..3 {
+            if let Some(cell) = &mut self.class_list[prob_tuple[i].1] {
+                cell.is_worst_3 = Some(true);
             }
         }
     }
@@ -471,6 +507,7 @@ pub fn convert_solver_to_timetable(solver: &ACOSolver) -> Result<TimeTable, Box<
                 .violations = violations;
         }
     }
+    time_table.update_worst3_cell(solver);
     Ok(time_table)
 }
 
@@ -640,7 +677,6 @@ pub fn handle_swap_cell(
             .as_ref()
             .unwrap()
             .index;
-        //これだと、一つ前のフェロモンが出てくる
         let mut color =
             get_pheromone_color(solver.as_ref().unwrap(), index, over_room, over_period);
         let is_locked = time_table.class_list[index]
@@ -659,6 +695,7 @@ pub fn handle_swap_cell(
             Some(color),
             solver.as_ref().unwrap(),
         );
+        time_table.update_worst3_cell(solver.as_ref().unwrap());
         return Ok(time_table.clone());
     }
     return Err("No timetable found".to_string());

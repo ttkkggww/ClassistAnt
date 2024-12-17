@@ -205,7 +205,8 @@ pub fn handle_get_rooms(
     info!("called handle_get_rooms");
     let input = input_manager.input.lock().unwrap();
     if let Some(input) = input.as_ref() {
-        return Ok(input.get_rooms().iter().map(|x| x.name.clone()).collect());
+        return Ok(input.get_rooms().iter().map(|x| x.name.clone()
+            + " (収容人数:" + &x.capacity.to_string() + ")").collect());
     }
     return Err("no input".to_string());
 }

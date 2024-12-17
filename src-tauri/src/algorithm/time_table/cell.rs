@@ -39,6 +39,7 @@ pub struct ActiveCell {
     pub size: Option<usize>,
     pub violations: Option<CellsViolation>,
     pub tool_tip_message: String,
+    pub is_worst_3: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

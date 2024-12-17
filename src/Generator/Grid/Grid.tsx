@@ -51,6 +51,7 @@ class ActiveCell {
   size?: number;
   violations?: cellsViolations;
   toolTipMessage: string;
+  isWorst3?: boolean;
 }
 
 class BlankCell {
@@ -243,6 +244,7 @@ const Grid: React.FC<GridProps> = ({
                   setTimeTable={setTimeTable}
                   isViolated={cell.violations?.isViolated!}
                   toolTipMessage={tipMessage}
+                  isWorst3={cell.isWorst3? cell.isWorst3: false}
                 />
               );
             }
