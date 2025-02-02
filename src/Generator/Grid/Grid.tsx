@@ -225,13 +225,7 @@ const Grid: React.FC<GridProps> = ({
               }
               return (
                 <Draggable
-                  hex_color={
-                    (showColor || cell.isLocked == true)
-                      ? cell.color
-                        ? cell.color
-                        : "#ffffff"
-                      : "#ffffff"
-                  }
+                  hex_color={cell.color ? cell.color : "#FFFFFF"}
                   text={cell.className +'\n'
                   + cell.teachers?.join(",") + '\n'
                   + cell.students?.join(",") + '\n'
@@ -245,6 +239,8 @@ const Grid: React.FC<GridProps> = ({
                   isViolated={cell.violations?.isViolated!}
                   toolTipMessage={tipMessage}
                   isWorst3={cell.isWorst3? cell.isWorst3: false}
+                  showColor={showColor}
+                  isLocked={cell.isLocked? cell.isLocked: false}
                 />
               );
             }
@@ -270,7 +266,7 @@ const Grid: React.FC<GridProps> = ({
               key={index}
               id={index}
               name={room}
-              styles={styles["grid-cell"]}
+              styles={`${styles["grid-cell"]} ${styles["grid-header"]}`}
             />
           );
         })}
@@ -280,7 +276,7 @@ const Grid: React.FC<GridProps> = ({
               key={index}
               id={index}
               name={period}
-              styles={styles["grid-cell"]}
+              styles={`${styles["grid-cell"]} ${styles["grid-sidebar"]}`}
             />
           );
         })}

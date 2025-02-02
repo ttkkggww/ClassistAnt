@@ -1,5 +1,6 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+use std::cmp::min;
 use std::sync::Mutex;
 use tauri::Manager;
 mod algorithm;
@@ -14,6 +15,30 @@ use std::time::Instant;
 use log::info;
 use std::env;
 
+fn reset_aco_solver(
+    input: &input::Input,
+    parameters: &algorithm::aco::aco_parameters::AcoParameters,
+) -> algorithm::aco::aco_solver::ACOSolver {
+    let solver = Some(algorithm::aco::aco_solver::ACOSolver {
+        parameters: parameters.clone(),
+        colony: algorithm::aco::colony::Colony::new(
+            algorithm::aco::graph::Graph::new(
+                parameters.clone(),
+                input.get_classes().clone(),
+                input.get_rooms().clone(),
+                input.get_teachers().clone(),
+            ),
+            parameters.clone(),
+        ),
+        best_ant: None,
+        super_ant: None,
+        cnt_super_not_change: 0,
+        input: input.clone(),
+        cnt: 0,
+    });
+    return solver.unwrap();
+}
+
 #[tauri::command]
 fn handle_adapt_input(
     input_manager: tauri::State<'_, InputManager>,
@@ -23,7 +48,6 @@ fn handle_adapt_input(
     info!("called handle_adapt_input");
     let input = input_manager.input.lock().unwrap();
     if let Some(input) = input.clone() {
-        println!("adapt input to solver.");
         let parameters = algorithm::aco::aco_parameters::AcoParameters {
             num_of_ants: 3,
             num_of_classes: input.get_classes().len(),
@@ -33,34 +57,20 @@ fn handle_adapt_input(
             num_of_teachers: input.get_teachers().len(),
             num_of_students: input.get_student_groups().len(),
             size_of_frame: 1,
-            q: 5.0,
-            alpha: 1.0,
-            beta: 2.0,
-            rou: 0.5,
+            
+            alpha: 1.0,// T 1.0 : K 2.0
+            beta: 2.0, // T 2.0 : K 8.0
+            q: 10.0,// T 10.0 : K 1.0
+            rou:  0.5, // T 0.5 : K 0.95
+            tau_min: 0.001,// T 0.001 : K 0.01
+            tau_max: 100000.0, // T 100000.0 : K 10.0
             max_iterations: 100,
-            tau_min: 0.0015,
-            tau_max: 100000.0,
             ant_prob_random: 0.001,
             super_not_change: 10000,
         };
-        let solver = Some(algorithm::aco::aco_solver::ACOSolver {
-            parameters: parameters.clone(),
-            colony: algorithm::aco::colony::Colony::new(
-                algorithm::aco::graph::Graph::new(
-                    parameters.clone(),
-                    input.get_classes().clone(),
-                    input.get_rooms().clone(),
-                    input.get_teachers().clone(),
-                ),
-                parameters.clone(),
-            ),
-            best_ant: None,
-            super_ant: None,
-            cnt_super_not_change: 0,
-            input: input,
-        });
+        let solver = reset_aco_solver(&input, &parameters);
         let mut manarged_solver = solver_manager.solver.lock().unwrap();
-        manarged_solver.replace(solver.unwrap());
+        manarged_solver.replace(solver);
         let mut managed_parameters = aco_parameters_manager.parameters.lock().unwrap();
         managed_parameters.replace(parameters);
     } else {
@@ -86,7 +96,7 @@ fn handle_aco_run_once(
             run_cnt += 1;
             if let Some(best_ant) = &solver.best_ant {
                 println!("length:{}", best_ant.calc_all_path_length(solver.colony.get_graph()));
-                if best_ant.calc_all_path_length(solver.colony.get_graph()) <= 0.5 {
+                if best_ant.calc_all_path_length(solver.colony.get_graph()) <= 0.001 {
                     break;
                 }
             }
@@ -95,24 +105,6 @@ fn handle_aco_run_once(
         println!("times:{:?},{:?}", run_cnt, duaration);
         let res = time_table::convert_solver_to_timetable(solver).map_err(|e| e.to_string())?;
         time_table::save_timetable(timetable_manager, res.clone());
-        /*
-        println!(
-            "violations_strict_student{:?}",
-            solver.get_best_ant_same_group_violations_strictly()
-        );
-        println!(
-            "violations_strict_teacher{:?}",
-            solver.get_best_ant_same_teacher_violations_strictly()
-        );
-        println!(
-            "violations_capacity{:?}",
-            solver.get_best_ant_capacity_violations()
-        );
-        println!(
-            "violations_strabble_days{:?}",
-            solver.get_best_ant_strabble_days_violations()
-        );
-        */
         return Ok(res);
     }
     return Err("No ACOSolver".to_string());
@@ -126,20 +118,18 @@ fn handle_aco_run_no_violations(
     info!("called handle_aco_run_no_violations");
     let mut managed_solver = solver_manager.solver.lock().unwrap();
     if let Some(solver) = managed_solver.as_mut() {
-        let mut run_cnt = 0;
         let start = Instant::now();
-        for _ in 0..2000 {
+        for gen in 0..2000 {
             solver.run_aco_times(1);
-            run_cnt += 1;
             if let Some(best_ant) = &solver.best_ant {
-                if best_ant.calc_all_path_length(solver.colony.get_graph()) <= 0.5 {
+                if best_ant.calc_all_path_length(solver.colony.get_graph()) <= 0.001 {
                     break;
                 }
-            println!("length:{}", best_ant.calc_all_path_length(solver.colony.get_graph()));
+                println!("{}", best_ant.count_violations(solver.colony.get_graph()));
             }
         }
         let duaration = start.elapsed();
-        println!("times:{:?},{:?}", run_cnt, duaration);
+        println!("{:?},{:?}", solver.cnt, duaration);
         let res = time_table::convert_solver_to_timetable(solver).map_err(|e| e.to_string())?;
         time_table::save_timetable(timetable_manager, res.clone());
         return Ok(res);
@@ -156,18 +146,53 @@ fn handle_calc_performance(
 ) -> Result<(), String> {
     info!("called handle_calc_paformance");
     let mut times = Vec::<f64>::new();
-    for _ in 0..100 {
-        handle_adapt_input(input_manager.clone(), solver_manager.clone(), aco_parameters_manager.clone());
-        let start = Instant::now();
-        handle_aco_run_no_violations(solver_manager.clone(), timetable_manager.clone());
-        let duration = start.elapsed();
-        times.push(duration.as_secs_f64());
+    let mut generations = Vec::<usize>::new();
+    let mut is_solved = Vec::<bool>::new();
+    let mut minimums = Vec::<usize>::new();
+    for i in 0..50 {
+        let mut is_cur_solve = false;
+        if let Some(input) = input_manager.input.lock().unwrap().as_ref() {
+            if let Some(parameters) = aco_parameters_manager.parameters.lock().unwrap().as_ref() {
+                let mut solver = reset_aco_solver(input, parameters);
+                let start = Instant::now();
+                let mut minimum = 100000000;
+                let mut count_cur_violation = 100000000;
+                for _ in 0..2000 {
+                        solver.run_aco_times(1);
+                        if let Some(best_ant) = &solver.best_ant {
+                            count_cur_violation = best_ant.count_violations(solver.colony.get_graph());
+                            
+                            if minimum > count_cur_violation {
+                                minimum = count_cur_violation;
+                            }
+                            if count_cur_violation <= 0 {
+                                break;
+                            }
+                    }
+                }
+                let duaration = start.elapsed();
+                times.push(duaration.as_secs_f64());
+                generations.push(solver.cnt);
+                minimums.push(minimum);
+                if let Some(best_ant) = &solver.best_ant {
+                    if count_cur_violation <= 0 {
+                        is_solved.push(true);
+                        is_cur_solve = true;
+                    } else {
+                        is_solved.push(false);
+                    }
+                }
+            }
+        }
+        println!("finished:{},{:},{}", i,is_cur_solve,minimums[i]);
     }
+    let generation_average = generations.iter().sum::<usize>() as f64 / generations.len() as f64;
     let average = times.iter().sum::<f64>() / times.len() as f64;
     for(i, time) in times.iter().enumerate() {
-        println!("{}:{}", i, time);
+        println!("{},{},{},{}", i, time,generations[i],minimums[i]);
     }
-    println!("average:{}", average);
+    println!("time_average:{}", average);
+    println!("gen_average:{}", generation_average);
     
     return Err("No ACOSolver".to_string());
 }

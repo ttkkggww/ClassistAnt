@@ -49,7 +49,10 @@ impl Colony {
     }
     fn calc_next_pheromone(&mut self) {
         for ant in self.ants.iter_mut() {
+            //ここは制約分割
             ant.update_next_pheromone(&mut self.graph);
+            //制約統一
+            //ant.update_next_pheromone_kenekayoro(&mut self.graph);
         }
     }
     pub fn reset_colony(&mut self) {

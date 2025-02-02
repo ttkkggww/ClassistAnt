@@ -21,11 +21,13 @@ pub struct ACOSolver {
     pub super_ant: Option<Ant>,
     pub cnt_super_not_change: usize,
     pub input: Input,
+    pub cnt: usize,
 }
 
 impl ACOSolver {
     pub fn run_aco(&mut self, graph: &super::graph::Graph) {
         for _ in 0..self.parameters.max_iterations {
+            self.cnt += 1;
             self.update_aco();
             if let Some(best_ant) = &self.best_ant {
                 println!("best path length: {}", best_ant.calc_all_path_length(graph));
@@ -74,6 +76,7 @@ impl ACOSolver {
     }
 
     pub fn run_aco_times(&mut self, times: usize) {
+        self.cnt += times;
         for _ in 0..times {
             self.update_aco();
         }

@@ -38,8 +38,11 @@ const Generator: React.FC<GeneratorProps> = ({ tableNames }) => {
 
   const sendClassData = () => {
     invoke("handle_set_input");
+    invoke("handle_adapt_input");
+    run_once();
   };
   const generate = () => {
+    invoke("handle_set_input");
     invoke("handle_adapt_input");
   };
   const run_once = () => {
@@ -115,16 +118,15 @@ const Generator: React.FC<GeneratorProps> = ({ tableNames }) => {
 
   return (
     <div>
-      <button onClick={sendClassData}>入力を変換</button>
-      <button onClick={generate}>リセット</button>
-      <button onClick={run_once}>時間割を作る</button>
-      <button onClick={run_once}>時間割を計算する</button>
-      <button onClick={run_no_violation}>成約違反がなくなるまで計算する。</button>
-      <button onClick={save_time_table}>save timetable</button>
-      <button onClick={load_time_table}>load timetable</button>
-      <button onClick={calc_performance}>calc performance</button>
+      <button onClick={generate}>データを読み込む</button>
+      <button onClick={sendClassData}>はじめから時間割を作る</button>
+      <button onClick={run_once}>さらに時間割を計算する</button>
+      <button onClick={run_no_violation}>制約違反がなくなるまで計算する。</button>
       <button onClick={handle_lock_no_violation}>制約違反以外のコマをロック</button>
       <button onClick={handle_unlock_violation}>制約違反のコマをアンロック</button>
+      <button onClick={save_time_table}>時間割を保存</button>
+      <button onClick={load_time_table}>保存した時間割を呼び出す</button>
+      <button onClick={calc_performance}>calc perf</button>
       <label>
         <input
           type="checkbox"

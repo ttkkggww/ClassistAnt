@@ -1,11 +1,14 @@
 //変換を作る
 pub mod cell;
 
+use crate::input;
 use crate::input::class;
 use crate::input::class::Class;
 use cell::ActiveCell;
 use cell::BlankCell;
 use core::str;
+use core::time;
+use std::cmp::min;
 use std::error::Error;
 use std::os::unix::raw::time_t;
 use std::result::Result;
@@ -13,6 +16,7 @@ use std::fs::File;
 use std::io::Read;
 use std::io::Write;
 use std::sync::Mutex;
+use super::aco;
 use super::aco::aco_solver::ACOSolver;
 use super::aco::aco_solver::ACOSolverManager;
 use super::aco::violations::CellsViolation;
@@ -25,7 +29,6 @@ use log::info;
 #[serde(rename_all = "camelCase")]
 pub struct TimeTable {
     pub class_list: Vec<Option<ActiveCell>>,
-    pub dragging_cell_data: Vec<Vec<Vec<Option<BlankCell>>>>,
     pub process_table: Vec<Vec<Option<Class>>>,
     pub room_size: usize,
     pub period_size: usize,
@@ -47,10 +50,8 @@ impl TimeTable {
             }
             process_table.push(row);
         }
-        let dragging_cell_data = vec![vec![vec![None; period_size]; room_size]; class_size];
         TimeTable {
             class_list,
-            dragging_cell_data,
             process_table,
             room_size,
             period_size,
@@ -131,7 +132,34 @@ impl TimeTable {
             println!("");
         }
     }
-
+    
+    fn update_students_num(&mut self, classes:&Vec<Class>) {
+        for i in 0..self.class_list.len() {
+            if let Some(cell) = &mut self.class_list[i] {
+                cell.student_size = Some(classes[cell.class_index].get_num_of_students());
+            }
+        }
+    }
+    fn update_all_process_table(&mut self, classes: &Vec<Class>) {
+        for i in 0..self.room_size {
+            for j in 0..self.period_size {
+                if let Some(class) = self.process_table[i][j].as_ref() {
+                    self.process_table[i][j] = Some(classes[class.index].clone());
+                }
+            }
+        }
+    }
+    
+    fn update_all_violations(&mut self, room_list: &Vec<Room>, one_day_length: usize) {
+        for i in 0..self.room_size {
+            for j in 0..self.period_size {
+                if let Some(_) = self.process_table[i][j] {
+                    self.update_violations(i, j, room_list, one_day_length);
+                }
+            }
+        }
+    }
+    
     fn update_violations(
         &mut self,
         room: usize,
@@ -237,7 +265,8 @@ impl TimeTable {
             .as_ref()
             .unwrap()
             .index;
-        for time in period_id..(period_id + serial_size) {
+        //println!("{},{},{}",period_id,serial_size,self.process_table[room_id][period_id].as_ref().unwrap().name);
+        for time in period_id..min(period_id + serial_size,25) {
             for room in 0..self.room_size {
                 if time == period_id && room == room_id {
                     continue;
@@ -285,7 +314,7 @@ impl TimeTable {
             .as_ref()
             .unwrap()
             .index;
-        for time in period_id..(period_id + serial_size) {
+        for time in period_id..min(25,period_id + serial_size) {
             for room in 0..self.room_size {
                 if time == period_id && room == room_id {
                     continue;
@@ -385,10 +414,6 @@ impl TimeTable {
             .map(|x| x.as_ref().unwrap().is_locked.unwrap_or(false))
             .collect::<Vec<bool>>();
         self.class_list = Vec::<Option<ActiveCell>>::new();
-        self.dragging_cell_data = vec![
-            vec![vec![None; self.period_size]; self.room_size];
-            solver.input.get_classes().len()
-        ];
         let teachers = solver.input.get_teachers();
         for i in 0..self.room_size {
             for j in 0..self.period_size {
@@ -821,14 +846,17 @@ pub fn load_timetable(
     timetable_manager: tauri::State<'_, TimeTableManager>,
     solver_manager: tauri::State<'_, ACOSolverManager>,
 ) -> Result<TimeTable, String> {
-    info!("called load_timetable");
+    let input = input::Input::new();
+    let mut parameters :Option<aco::aco_parameters::AcoParameters> = None;
     if let Some(mut path) = config_dir() {
         path.push(DUMP_PATH);
         path.push(DUMP_SOLVER_FILE);
         let mut file = File::open(path).unwrap();
         let mut json = String::new();
         file.read_to_string(&mut json).unwrap();
-        let solver: ACOSolver = serde_json::from_str(&json).unwrap();
+        let mut solver: ACOSolver = serde_json::from_str(&json).unwrap();
+        solver.input = input.clone();
+        parameters = Some(solver.parameters.clone());
         save_solver(solver_manager, solver.clone()).unwrap();
     }
     if let Some(mut path) = config_dir() {
@@ -838,7 +866,12 @@ pub fn load_timetable(
         let mut file = File::open(path).unwrap();
         let mut json = String::new();
         file.read_to_string(&mut json).unwrap();
-        let timetable: TimeTable = serde_json::from_str(&json).unwrap();
+        let mut timetable: TimeTable = serde_json::from_str(&json).unwrap();
+        timetable.update_students_num(input.get_classes());
+        timetable.update_all_process_table(input.get_classes());
+        if let Some(parameters) = parameters {
+            timetable.update_all_violations(input.get_rooms(), parameters.num_of_day_lengths);
+        }
         save_timetable(timetable_manager, timetable.clone());
         return Ok(timetable);
     }

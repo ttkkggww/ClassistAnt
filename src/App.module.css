@@ -1,18 +1,16 @@
 
 .field {
-  display: flex;
+  overflow: auto;
   align-items: center;
- overflow-y: scroll; 
+  overflow-y: scroll; 
 }
 
 
 .react-tabs {
-  display: flex;
   flex-direction: column;
 }
 
 .react-tabs__tab-list {
-  display: flex;
   flex-direction: row;
   list-style: none;
   padding: 0;

@@ -18,6 +18,8 @@ interface DraggableProps {
   isViolated: boolean;
   toolTipMessage: string;
   isWorst3: boolean;
+  showColor: boolean;
+  isLocked: boolean;
 }
 
 export function Draggable({
@@ -32,6 +34,8 @@ export function Draggable({
   isViolated,
   toolTipMessage,
   isWorst3,
+  showColor,
+  isLocked,
 }: DraggableProps) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: id.toString(),
@@ -40,25 +44,29 @@ export function Draggable({
   const x = room + 2;
   const y = period + 2;
 
-  const style = {
-    transform: transform
-      ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
-      : undefined,
-    backgroundColor: isWorst3 ? "transparent" : hex_color,
-    backgroundImage: isWorst3
+const style = {
+  transform: transform
+    ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
+    : undefined,
+  backgroundColor:
+    (!showColor && !isLocked) // showColor が false かつ isLocked が false の場合
+      ? "#FFFFFF" // 背景色を白に設定
+      : hex_color, // 色情報を表示
+  backgroundImage:
+    showColor && isWorst3 // showColor が true の場合のみストライプ模様を適用
       ? `repeating-linear-gradient(
           45deg,
-          ${hex_color} 0,
-          ${hex_color} 10px,
+          #f0ad4e 0,
+          #f0ad4e 10px,
           transparent 10px,
           transparent 20px
         )`
       : undefined,
-    gridColumn: `span ${grid_size}`,
-    gridArea: `${y}/${x}/${y + grid_size}/${x + 1}`,
-    zIndex: transform ? 3 : 2,
-    border: isViolated ? "2px solid red" : "",
-  };
+  gridColumn: `span ${grid_size}`,
+  gridArea: `${y}/${x}/${y + grid_size}/${x + 1}`,
+  zIndex: transform ? 3 : 2,
+  border: isViolated ? "2px solid red" : "",
+};
 
   const handleDoubleClick = useCallback(() => {
     invoke<TimeTable>("handle_switch_lock", { id })
