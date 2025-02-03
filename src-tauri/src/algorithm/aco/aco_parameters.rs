@@ -1,6 +1,9 @@
 use std::sync::Mutex;
 use tauri::Manager;
-#[derive(Clone, Debug)]
+use log::info;
+
+use serde::{Deserialize, Serialize};
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AcoParameters {
     pub num_of_ants: usize,
     pub num_of_classes: usize,
@@ -30,6 +33,7 @@ static days_of_week: [&str; 7] = ["月", "火", "水", "木", "金", "土", "日
 pub fn handle_get_periods(
     parameters_manager: tauri::State<'_, AcoParametersManager>,
 ) -> Result<Vec<String>, String> {
+    info!("called handle_get_periods");
     let parameters = parameters_manager.parameters.lock().unwrap();
     let mut res = Vec::new();
     if let Some(parameters) = &*parameters {

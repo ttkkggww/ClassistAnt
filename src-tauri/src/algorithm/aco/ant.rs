@@ -11,16 +11,17 @@ use rand::seq::SliceRandom;
 use std::collections::HashMap;
 use std::collections::{BTreeMap, BTreeSet};
 use std::vec;
+use serde::{Deserialize, Serialize};
 
-static CAP_COEF: f64 = 2.0;
-static TEACHER_COEF: f64 = 5.0;
-static STUDENT_COEF: f64 = 3.0;
+static CAP_COEF: f64 = 7.0;
+static TEACHER_COEF: f64 = 4.0;
+static STUDENT_COEF: f64 = 4.0;
 static ABSENT_DAYS_COEF: f64 = 3.0;
 static STRADDLE_DAYS_COEF: f64 = 1.0;
 static COLLECTION_COEF: f64 = 1.0;
 static SEQUENTIAL_FROM_START_COEF: f64 = 4.0;
 
-#[derive(Clone)]
+#[derive(Deserialize,Serialize,Clone)]
 pub struct Ant {
     visited_classes: Vec<bool>,
     visited_roomperiods: Vec<Vec<bool>>,
@@ -136,7 +137,7 @@ impl Ant {
     fn calc_all_path_length_each_frame(&self) -> Vec<Vec<f64>> {
         let mut length =
             vec![
-                vec![1.0; self.parameters.num_of_periods / self.parameters.size_of_frame];
+                vec![0.0; self.parameters.num_of_periods / self.parameters.size_of_frame];
                 self.parameters.num_of_rooms
             ];
         for r in 0..self.parameters.num_of_rooms as usize {
@@ -156,11 +157,25 @@ impl Ant {
                         ((self.parameters.size_of_frame - count_in_frame) as f64) * COLLECTION_COEF;
                 }
                 if is_empty {
-                    length[r][f] = 1.0;
+                    length[r][f] = 0.0;
                 }
             }
         }
         length
+    }
+    
+    pub fn update_next_pheromone_kenekayoro(&mut self, graph: &mut Graph) {
+        let length = self.calc_all_path_length(graph);
+        for i in 0..self.corresponding_crp.len() {
+            let [room, period] = self.corresponding_crp[i];
+            let q = self.parameters.q;
+            graph.add_next_pheromone(
+                i,
+                room,
+                period,
+                q / (length  + 1.0)
+            );
+        }
     }
 
     pub fn update_next_pheromone(&mut self, graph: &mut Graph) {
@@ -177,15 +192,15 @@ impl Ant {
                 q / (length_period[period]
                     + length_room[room]
                     + length_frame[room][period / self.parameters.size_of_frame]
-                    - 1.0
-                    - 1.0),
+                    + 1.0),
             );
         }
     }
 
+
     // capacity ,students and teachers
     fn calc_all_path_length_each_period(&self, graph: &Graph) -> Vec<f64> {
-        let mut length = vec![1.0; self.parameters.num_of_periods as usize];
+        let mut length = vec![0.0; self.parameters.num_of_periods as usize];
         for class_id in 0..self.corresponding_crp.len() {
             let [room, period] = self.corresponding_crp[class_id];
             if graph.get_room_ref(room).get_capacity()
@@ -221,7 +236,7 @@ impl Ant {
 
     // straddle days
     fn calc_all_path_length_each_room(&self, graph: &Graph) -> Vec<f64> {
-        let mut length = vec![1.0; self.parameters.num_of_rooms as usize];
+        let mut length = vec![0.0; self.parameters.num_of_rooms as usize];
         for class_id in 0..self.corresponding_crp.len() {
             let [room, period] = self.corresponding_crp[class_id];
             let serial_size = graph.get_class(class_id).serial_size;
@@ -235,22 +250,83 @@ impl Ant {
     }
 
     pub fn calc_all_path_length(&self, graph: &Graph) -> f64 {
-        let mut length = 1.0;
+        let mut length = 0.0;
         let length_period = self.calc_all_path_length_each_period(graph);
         let length_room = self.calc_all_path_length_each_room(graph);
         let length_frame = self.calc_all_path_length_each_frame();
         for p in &length_period {
-            length += p - 1.0;
+            length += p;
         }
         for r in &length_room {
-            length += r - 1.0;
+            length += r;
         }
         for p in &length_frame {
             for f in p {
-                length += f - 1.0;
+                length += f;
             }
         }
 
+        length
+    }
+    pub fn count_violation_each_period(&self, graph: &Graph) -> Vec<usize>{
+        let mut counts = vec![0; self.parameters.num_of_periods as usize];
+        for class_id in 0..self.corresponding_crp.len() {
+            let [room, period] = self.corresponding_crp[class_id];
+            if graph.get_room_ref(room).get_capacity()
+                < graph.get_class_ref(class_id).get_num_of_students()
+            {
+                counts[period] += 1;
+            }
+        }
+        for mp in self.work_periods_each_students.iter() {
+            for (period, v) in mp.iter() {
+                let ftime = (*v).len();
+                counts[*period] += ftime * (ftime - 1) / 2;
+            }
+        }
+        for mp in self.work_periods_each_teachers.iter() {
+            for (period, v) in mp.iter() {
+                let ftime = (*v).len();
+                counts[*period] += ftime * (ftime - 1) / 2;
+            }
+        }
+        for class_id in 0..self.corresponding_crp.len() {
+            let [room, period] = self.corresponding_crp[class_id];
+            let absent_days = self.calc_absent_days(
+                &graph.get_class_ref(class_id).get_teacher_indexes(),
+                graph.get_teachers_ref(),
+            );
+            if (absent_days.contains(&period)) {
+                counts[period] += 1;
+            }
+        }
+        counts
+    }
+    
+    pub fn count_violation_each_room(&self, graph: &Graph) -> Vec<usize>{
+        let mut counts = vec![0; self.parameters.num_of_rooms as usize];
+        for class_id in 0..self.corresponding_crp.len() {
+            let [room, period] = self.corresponding_crp[class_id];
+            let serial_size = graph.get_class(class_id).serial_size;
+            if (period % self.parameters.num_of_day_lengths) + serial_size
+                > self.parameters.num_of_day_lengths
+            {
+                counts[room] += 1;
+            }
+        }
+        counts
+    }
+    
+    pub fn count_violations(&self, graph: &Graph) -> usize {
+        let mut length = 0;
+        let length_period = self.count_violation_each_period(graph);
+        let length_room = self.count_violation_each_room(graph);
+        for p in &length_period {
+            length += p;
+        }
+        for r in &length_room {
+            length += r;
+        }
         length
     }
 
@@ -296,7 +372,7 @@ impl Ant {
         for [room, period] in self.calc_allocatable_room_periods(class_period_length, graph) {
             let pheromone = graph.get_pheromone(v, room, period);
 
-            let heuristics = self.parameters.q
+            let heuristics = 1.0
                 / self.calc_edge_length(
                     graph.get_room_ref(room),
                     graph.get_class_ref(v),
@@ -307,6 +383,7 @@ impl Ant {
                     period as usize,
                     self.parameters.size_of_frame,
                 );
+            //ここを足し算か掛け算に変更
             let pre_normalized_value = pheromone.powf(alpha) * heuristics.powf(beta);
             if v == 0 {}
             sum_value += pre_normalized_value;
@@ -380,7 +457,7 @@ impl Ant {
             if let Some(times) = self.work_periods_each_students.get(*id as usize) {
                 if let Some(time) = times.get(&(period as usize)) {
                     let ftime = (*time).len() as f64;
-                    edge_length += (ftime * (ftime - 1.0) / 2.0 as f64) * STUDENT_COEF;
+                    edge_length += (ftime )* STUDENT_COEF;
                 }
             }
         }
@@ -389,7 +466,7 @@ impl Ant {
             if let Some(times) = self.work_periods_each_teachers.get(*id as usize) {
                 if let Some(time) = times.get(&(period as usize)) {
                     let ftime = (*time).len() as f64;
-                    edge_length += (ftime * (ftime - 1.0) / 2.0 as f64) * TEACHER_COEF;
+                    edge_length += (ftime)  * TEACHER_COEF;
                 }
             }
         }

@@ -33,11 +33,13 @@ pub struct ActiveCell {
     pub class_name: String,
     pub teachers: Option<Vec<String>>,
     pub students: Option<Vec<String>>,
+    pub student_size: Option<usize>,
     pub color: Option<String>,
     pub is_locked: Option<bool>,
     pub size: Option<usize>,
     pub violations: Option<CellsViolation>,
     pub tool_tip_message: String,
+    pub is_worst_3: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

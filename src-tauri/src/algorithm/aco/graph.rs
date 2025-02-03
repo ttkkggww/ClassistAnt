@@ -4,8 +4,9 @@ use crate::algorithm::time_table::cell::ActiveCell;
 use crate::input::class::{self, Class};
 use crate::input::room::Room;
 use crate::input::teacher::{self, Teacher};
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Edge {
     to: [usize; 2],
     length: f64,
@@ -14,7 +15,7 @@ pub struct Edge {
     next_pheromone: f64,
 }
 
-#[derive(Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Graph {
     edges: Vec<Vec<Vec<Edge>>>,
     classes_is_locked: Vec<Option<(usize, usize)>>,

@@ -1,15 +1,38 @@
-/* GridComponent.module.css */
-
 .grid-container {
   display: grid;
-  grid-template-columns: 40px repeat(2,minmax(100px,1fr));
-  grid-template-rows: 40px repeat(25,1fr);
+  grid-template-columns: 60px repeat(22, minmax(180px, 1fr));
+  grid-template-rows: 50px repeat(25, minmax(100px, 1fr));
   text-align: center;
 }
 
-
 .grid-cell {
   border: 1px solid #ccc;
-  overflow-y: scroll; /* テキストがはみ出た場合に隠す */
+  white-space: pre-wrap;
+  overflow-y: scroll;
   overflow-x: scroll;
+}
+
+/* 左上の交差セル（部屋/時間ヘッダー） */
+.grid-corner {
+  position: sticky;
+  top: 0;
+  left: 0;
+  background-color: #fff;
+  z-index: 20; /* 最も上に表示 */
+}
+
+/* 上端（時間ヘッダー） */
+.grid-header {
+  position: sticky;
+  top: 0; /* 上端に固定 */
+  background-color: #fff;
+  z-index: 10; /* 左上の交差セルより下 */
+}
+
+/* 左端（部屋ヘッダー） */
+.grid-sidebar {
+  position: sticky;
+  left: 0; /* 左端に固定 */
+  background-color: #fff;
+  z-index: 10; /* 左上の交差セルより下 */
 }

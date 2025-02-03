@@ -1,6 +1,6 @@
 const TEACHERS_CSV_PATH: &str = "./csvdata/teachers.csv";
 const STUDENT_GROUPS_CSV_PATH: &str = "./csvdata/student_groups.csv";
-const CLASSES_CSV_PATH: &str = "./csvdata/themed_research.csv";
+const CLASSES_CSV_PATH: &str = "./csvdata/classes.csv";
 const ROOMS_CSV_PATH: &str = "./csvdata/rooms.csv";
 use std::error::Error;
 mod class;
@@ -14,6 +14,7 @@ use room::Room;
 use serde::{Deserialize, Serialize};
 use student_group::StudentGroup;
 use teacher::Teacher;
+use log::info;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum TableType {
@@ -25,6 +26,7 @@ pub enum TableType {
 
 #[tauri::command]
 pub fn handle_get_table(table_type: String) -> Result<TableType, String> {
+    info!("table_type: {}", table_type);
     if table_type == "teachers" {
         let res = Teachers::new().map_err(|e| e.to_string())?;
         return Ok(TableType::Teachers(res));
