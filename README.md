@@ -1,4 +1,6 @@
-# プロジェクト名
+# ClassistAnt
+蟻コロニー最適化を使用した時間割編成システム
+Class + Assist + Ant
 
 ## 概要
 
